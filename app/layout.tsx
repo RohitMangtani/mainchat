@@ -1,16 +1,17 @@
 import type { Metadata } from "next";
 import {
-  Unbounded,
+  Playfair_Display,
   Schibsted_Grotesk,
   Spline_Sans_Mono,
   Instrument_Serif,
 } from "next/font/google";
 import "./globals.css";
 
-const unbounded = Unbounded({
+// Didone-class serif — the show's letterpress wordmark/chyron register
+const playfair = Playfair_Display({
   variable: "--font-unbounded",
   subsets: ["latin"],
-  weight: ["500", "700", "900"],
+  weight: ["600", "700", "900"],
 });
 
 const schibsted = Schibsted_Grotesk({
@@ -44,7 +45,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${unbounded.variable} ${schibsted.variable} ${splineMono.variable} ${instrument.variable} h-full antialiased`}
+      className={`${playfair.variable} ${schibsted.variable} ${splineMono.variable} ${instrument.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>

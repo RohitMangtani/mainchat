@@ -80,7 +80,7 @@ export function Dashboard() {
         onOpenConfig={() => setConfigOpen(true)}
       />
 
-      <Ticker vibe={chat.vibe} />
+      <Ticker />
 
       {/* main floor */}
       <main className="relative flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3 md:overflow-hidden lg:flex-row lg:items-stretch">

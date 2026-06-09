@@ -43,7 +43,11 @@ function LiveTag({
       <span className="pointer-events-auto flex items-center gap-1.5 rounded-md border border-white/10 bg-ink-0/80 px-2 py-1 backdrop-blur">
         <span
           className={`h-1.5 w-1.5 rounded-full ${status.live ? "animate-pulse-dot" : ""}`}
-          style={{ color: meta.color, background: status.live ? meta.color : "#55545e" }}
+          style={{
+            // red = on air, the broadcast convention their stream package uses
+            color: status.live ? "#d11226" : "#55545e",
+            background: status.live ? "#d11226" : "#55545e",
+          }}
         />
         <span className="font-mono text-[9px] tracking-widest" style={{ color: meta.color }}>
           {meta.name.toUpperCase()}
@@ -129,7 +133,7 @@ export function StreamStage({
     <section className="panel relative flex flex-col overflow-hidden md:min-h-0 md:flex-1">
       {/* stage toolbar */}
       <div className="flex items-center gap-2 border-b hairline px-3 py-2">
-        <h2 className="display-label text-[10px] text-gold">Stage</h2>
+        <h2 className="chyron text-[9px]">Stage</h2>
         <div className="ml-auto flex items-center gap-1 rounded-lg border border-white/8 bg-ink-0/60 p-0.5">
           {MODES.map((m) => (
             <button

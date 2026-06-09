@@ -34,16 +34,21 @@ export function ChatFeed({
   // "N new" is a real message count, not a count of flush batches
   const [seenTotal, setSeenTotal] = useState(0);
   const [filters, setFilters] = useState<Set<PlatformId>>(new Set(ALL_PLATFORMS));
+  // producer view: only audience questions (vibe engine tags them at ingest)
+  const [questionsOnly, setQuestionsOnly] = useState(false);
 
   const missed = Math.max(0, totalCount - seenTotal);
 
-  const visible = useMemo(
-    () =>
+  const visible = useMemo(() => {
+    let list =
       filters.size === ALL_PLATFORMS.length
         ? messages
-        : messages.filter((m) => filters.has(m.platform)),
-    [messages, filters],
-  );
+        : messages.filter((m) => filters.has(m.platform));
+    if (questionsOnly) {
+      list = list.filter((m) => m.vibe.tags.includes("question"));
+    }
+    return list;
+  }, [messages, filters, questionsOnly]);
 
   // auto-scroll: stick to bottom unless the user scrolled up to read
   useEffect(() => {
@@ -90,7 +95,7 @@ export function ChatFeed({
     <section className="panel flex min-h-0 flex-1 flex-col overflow-hidden">
       {/* feed header */}
       <header className="flex items-center gap-2 border-b hairline px-3 py-2.5">
-        <h2 className="display-label text-[10px] text-gold">Mainchat</h2>
+        <h2 className="chyron text-[9px]">Mainchat</h2>
         <span className="tabular text-[10px] text-faint">{visible.length}</span>
 
         <div className="ml-auto flex items-center gap-1">
@@ -115,6 +120,17 @@ export function ChatFeed({
 
           <div className="mx-1 h-4 w-px bg-white/10" />
 
+          <button
+            onClick={() => setQuestionsOnly((q) => !q)}
+            title={questionsOnly ? "Show all messages" : "Show only audience questions"}
+            className={`flex h-6 w-6 items-center justify-center rounded-md font-mono text-[11px] font-bold transition-colors ${
+              questionsOnly
+                ? "bg-gold/20 text-gold"
+                : "text-muted hover:bg-white/8 hover:text-cream"
+            }`}
+          >
+            ?
+          </button>
           <button
             onClick={paused ? onResume : onPause}
             title={paused ? "Resume feed" : "Pause feed"}

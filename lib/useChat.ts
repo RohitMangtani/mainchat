@@ -18,10 +18,19 @@ import type {
   VibeSnapshot,
 } from "./types";
 import { scoreMessage, VibeTracker } from "./vibe";
+import { emoteResolver } from "./emoteResolver";
 import { TwitchConnector } from "./connectors/twitch";
 import { KickConnector } from "./connectors/kick";
 import { XConnector } from "./connectors/x";
+import { XLiveConnector } from "./connectors/xlive";
 import { DemoConnector } from "./connectors/demo";
+
+/** "@handle" or a bare handle → keyless live-broadcast chat;
+ *  anything else is a search query for the bearer-token lane. */
+function asXHandle(query: string): string | null {
+  const m = /^@?(\w{1,15})$/.exec(query.trim());
+  return m ? m[1] : null;
+}
 
 const MAX_MESSAGES = 350;
 const FLUSH_INTERVAL_MS = 120;
@@ -144,6 +153,7 @@ export function useChat(config: AppConfig): UseChatResult {
     const channel = config.twitchChannel.trim();
     if (config.enabled.twitch && channel !== "") {
       replaceStatus("twitch", "connecting");
+      void emoteResolver.loadChannel("twitch", channel.toLowerCase());
       const connector: Connector = new TwitchConnector(
         channel,
         makeEvents("twitch"),
@@ -162,6 +172,7 @@ export function useChat(config: AppConfig): UseChatResult {
     const channel = config.kickChannel.trim();
     if (config.enabled.kick && channel !== "") {
       replaceStatus("kick", "connecting");
+      void emoteResolver.loadChannel("kick", channel.toLowerCase());
       const connector: Connector = new KickConnector(
         channel,
         makeEvents("kick"),
@@ -180,7 +191,12 @@ export function useChat(config: AppConfig): UseChatResult {
     const query = config.xQuery.trim();
     if (config.enabled.x && query !== "") {
       replaceStatus("x", "connecting");
-      const connector: Connector = new XConnector(query, makeEvents("x"));
+      // "@handle" → keyless live-broadcast chat (the show streams on X);
+      // anything else → recent-search polling (requires X_BEARER_TOKEN)
+      const handle = asXHandle(query);
+      const connector: Connector = handle
+        ? new XLiveConnector(handle, makeEvents("x"))
+        : new XConnector(query, makeEvents("x"));
       connector.start();
       return () => {
         connector.stop();

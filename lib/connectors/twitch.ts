@@ -11,6 +11,7 @@ import type {
   PlatformStatus,
   VibeInfo,
 } from "../types";
+import { parseTwitchEmoteTag } from "../emotes";
 
 const IRC_URL = "wss://irc-ws.chat.twitch.tv:443";
 const BACKOFF_MIN_MS = 1_000;
@@ -360,6 +361,13 @@ export class TwitchConnector implements Connector {
 
     const color = tags["color"] && tags["color"].length > 0 ? tags["color"] : undefined;
 
+    // positional native emotes from the IRCv3 `emotes` tag
+    const emoteTag = tags["emotes"];
+    const nativeEmotes =
+      emoteTag && emoteTag.length > 0
+        ? parseTwitchEmoteTag(emoteTag, text)
+        : undefined;
+
     const msg: ChatMessage = {
       id,
       platform: "twitch",
@@ -369,6 +377,8 @@ export class TwitchConnector implements Connector {
       color,
       badges: mapBadges(tags["badges"]),
       timestamp,
+      nativeEmotes:
+        nativeEmotes && nativeEmotes.length > 0 ? nativeEmotes : undefined,
       vibe: { ...NEUTRAL_VIBE, tags: [] },
     };
 

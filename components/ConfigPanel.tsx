@@ -140,7 +140,7 @@ export function ConfigPanel({
             }}
             className="group flex w-full items-center gap-3 rounded-xl border border-gold/30 bg-gold/8 px-4 py-3 text-left transition-all hover:border-gold/60 hover:bg-gold/12"
           >
-            <BubbleMark letter="M" className="h-9 w-9 shrink-0 transition-transform group-hover:scale-110" />
+            <BubbleMark className="h-9 w-9 shrink-0 text-gold transition-transform group-hover:scale-110" />
             <span>
               <span className="display-label block text-[10px] text-gold">
                 Load Market Bubble Defaults
@@ -197,11 +197,11 @@ export function ConfigPanel({
                 <PlatformIcon platform="x" className="mt-7 h-4 w-4 shrink-0 text-cream" />
                 <div className="flex-1">
                   <Field
-                    label="X live search"
+                    label="X source"
                     value={draft.xQuery}
-                    placeholder='"market bubble" OR @Banks'
+                    placeholder="@MarketBubble"
                     onChange={(v) => set("xQuery", v)}
-                    hint="Handles, hashtags, or phrases. Needs an X API bearer token on the server (X_BEARER_TOKEN) — see README."
+                    hint="An @handle joins that account's live broadcast chat — free, no API key. A search query instead streams matching posts (needs X_BEARER_TOKEN, see README)."
                   />
                 </div>
                 <span className="mt-7"><Toggle on={draft.enabled.x} onChange={(v) => setEnabled("x", v)} accent="#e9e9ec" /></span>

@@ -8,8 +8,10 @@ import type {
   ChatMessage,
   Connector,
   ConnectorEvents,
+  NativeEmoteRef,
   PlatformStatus,
 } from "../types";
+import { parseKickEmotes } from "../emotes";
 
 // Kick's public production Pusher app key, embedded in their web client.
 const PUSHER_URL =
@@ -23,7 +25,6 @@ const VIEWER_REFRESH_MS = 60_000;
 // After JSON.parse, the event name contains single backslashes.
 const CHAT_EVENT = "App\\Events\\ChatMessageEvent";
 
-const EMOTE_RE = /\[emote:\d+:([^\]]+)\]/g;
 
 const BADGE_MAP: Record<string, Badge> = {
   broadcaster: "owner",
@@ -256,15 +257,36 @@ export class KickConnector implements Connector {
       if (!Number.isNaN(parsed)) timestamp = parsed;
     }
 
+    // [emote:id:name] → bare name in text + per-message image map; locate
+    // each name's occurrences so the UI can render the actual images inline
+    const { text: cleanText, emotes: emoteMap } = parseKickEmotes(content);
+    let nativeEmotes: NativeEmoteRef[] | undefined;
+    if (emoteMap.size > 0) {
+      nativeEmotes = [];
+      const chars = Array.from(cleanText);
+      for (const [name, url] of emoteMap) {
+        const nameLen = Array.from(name).length;
+        for (let i = 0; i + nameLen <= chars.length; i += 1) {
+          if (chars.slice(i, i + nameLen).join("") === name) {
+            nativeEmotes.push({ name, url, start: i, end: i + nameLen - 1 });
+            i += nameLen - 1;
+          }
+        }
+      }
+      nativeEmotes.sort((a, b) => a.start - b.start);
+      if (nativeEmotes.length === 0) nativeEmotes = undefined;
+    }
+
     const msg: ChatMessage = {
       id: `kick-${nativeId}`,
       platform: "kick",
       username,
       displayName: senderName || username,
-      text: content.replace(EMOTE_RE, "$1"),
+      text: cleanText,
       color,
       badges,
       timestamp,
+      nativeEmotes,
       // Neutral placeholder — useChat enriches centrally via scoreMessage().
       vibe: { score: 0, tags: [], toxic: false },
     };

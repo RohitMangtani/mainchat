@@ -1,7 +1,8 @@
 "use client";
 
-import { memo, useState } from "react";
+import { memo, useMemo, useState } from "react";
 import type { Badge, ChatMessage } from "@/lib/types";
+import { emoteResolver } from "@/lib/emoteResolver";
 import { PLATFORM_META, PlatformBadge } from "./PlatformBadge";
 import { Hover } from "./Tooltip";
 
@@ -32,6 +33,16 @@ function MessageRowInner({
   const [revealed, setRevealed] = useState(false);
   const meta = PLATFORM_META[msg.platform];
   const blurred = filterToxic && msg.vibe.toxic && !revealed;
+
+  // native (Twitch/Kick) + third-party (7TV/BTTV/FFZ) emotes → inline images
+  const fragments = useMemo(
+    () =>
+      emoteResolver.fragment(
+        { platform: msg.platform, text: msg.text },
+        msg.nativeEmotes,
+      ),
+    [msg.platform, msg.text, msg.nativeEmotes],
+  );
 
   const sourceTip = (
     <span>
@@ -78,7 +89,21 @@ function MessageRowInner({
           onClick={blurred ? () => setRevealed(true) : undefined}
           title={blurred ? "Filtered by vibe shield — click to reveal" : undefined}
         >
-          {msg.text}
+          {fragments.map((f, i) =>
+            f.kind === "text" ? (
+              <span key={i}>{f.text}</span>
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                key={i}
+                src={f.url}
+                alt={f.name}
+                title={f.name}
+                loading="lazy"
+                className="inline-block h-[20px] w-auto -translate-y-px align-middle"
+              />
+            ),
+          )}
         </span>
         {msg.vibe.tags.includes("bet") && !blurred && (
           <span className="ml-1.5 inline-flex translate-y-px items-center rounded border border-gold/35 bg-gold/10 px-1 py-px font-mono text-[8.5px] tracking-wider text-gold-soft">

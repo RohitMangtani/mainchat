@@ -10,16 +10,22 @@
   --color-ink-1: #0c0c0f;
   --color-ink-2: #121217;
   --color-ink-3: #1a1a21;
-  --color-gold: #f5c400;
-  --color-gold-soft: #ffe27a;
+  --color-gold: #f0b95a;
+  --color-gold-soft: #fdce93;
   --color-gold-deep: #b98f00;
-  --color-mint: #3df59b;
+  --color-mint: #3dbf7a;
   --color-twitch: #9146ff;
   --color-kick: #53fc18;
-  --color-blood: #ff4d5e;
+  --color-blood: #f4506e;
   --color-cream: #f4f2ea;
   --color-muted: #8e8c96;
   --color-faint: #55545e;
+
+  /* sampled from the show's actual brand + broadcast package */
+  --color-mb-red: #d11226; /* annotation red — LIVE/alerts only */
+  --color-tape-cyan: #6fc6e0; /* ticker numerals on their stream */
+  --color-parchment: #f1e1d4; /* cream nameplate panels */
+  --color-paper: #c9c8ce; /* letterpress paper gray */
 
   --animate-msg-in: msg-in 0.22s cubic-bezier(0.21, 1.02, 0.73, 1) both;
   --animate-pulse-dot: pulse-dot 1.6s ease-in-out infinite;
@@ -111,21 +117,29 @@
 
   * {
     scrollbar-width: thin;
-    scrollbar-color: rgba(245, 196, 0, 0.22) transparent;
+    scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
   }
   *::-webkit-scrollbar {
     width: 6px;
     height: 6px;
   }
   *::-webkit-scrollbar-thumb {
-    background: rgba(245, 196, 0, 0.18);
+    background: rgba(255, 255, 255, 0.14);
     border-radius: 99px;
   }
   *::-webkit-scrollbar-thumb:hover {
-    background: rgba(245, 196, 0, 0.35);
+    background: rgba(255, 255, 255, 0.28);
   }
   *::-webkit-scrollbar-track {
     background: transparent;
+  }
+
+  /* OBS overlay route: fully transparent canvas, no grain */
+  body.overlay-mode {
+    background: transparent;
+  }
+  body.overlay-mode::after {
+    display: none;
   }
 }
 
@@ -134,17 +148,17 @@
   .panel {
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.022), rgba(255, 255, 255, 0)),
       var(--color-ink-1);
-    border: 1px solid rgba(245, 196, 0, 0.09);
+    border: 1px solid rgba(255, 255, 255, 0.07);
     border-radius: 14px;
   }
 
   .hairline {
-    border-color: rgba(245, 196, 0, 0.09);
+    border-color: rgba(255, 255, 255, 0.07);
   }
 
   /* gold gradient text for premium moments */
   .gold-text {
-    background: linear-gradient(120deg, #ffe27a 0%, #f5c400 38%, #b98f00 64%, #ffe27a 100%);
+    background: linear-gradient(120deg, #fdce93 0%, #f0b95a 38%, #b98f00 64%, #fdce93 100%);
     background-size: 200% auto;
     -webkit-background-clip: text;
     background-clip: text;
@@ -152,10 +166,24 @@
     animation: var(--animate-shimmer);
   }
 
+  /* engraved serif caps — the show's print/broadcast register */
   .display-label {
-    font-family: var(--font-display), sans-serif;
-    letter-spacing: 0.22em;
+    font-family: var(--font-display), serif;
+    font-weight: 700;
+    letter-spacing: 0.2em;
     text-transform: uppercase;
+  }
+
+  /* white chyron band with black serif caps — their on-air section headers */
+  .chyron {
+    font-family: var(--font-display), serif;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-ink-0);
+    background: var(--color-parchment);
+    border-radius: 3px;
+    padding: 1px 7px;
   }
 
   .tabular {

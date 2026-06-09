@@ -6,7 +6,9 @@ const STORAGE_KEY = "mainchat.config.v1";
 export const MARKET_BUBBLE_DEFAULTS: AppConfig = {
   twitchChannel: "fazebanks",
   kickChannel: "fazebanks",
-  xQuery: '"market bubble" OR @Banks OR @blknoiz06 -is:retweet',
+  // a bare @handle engages the KEYLESS live-broadcast chat lane — the show
+  // streams on X, so its broadcast chat joins the feed with zero credentials
+  xQuery: "@MarketBubble",
   enabled: { twitch: true, kick: true, x: true },
   demoMode: false,
   brandPreset: "marketbubble",

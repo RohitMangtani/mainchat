@@ -25,21 +25,17 @@ function pulseLine(v: VibeSnapshot): string {
     v.keywords.length > 0
       ? `locked on ${v.keywords.slice(0, 2).join(" and ")}`
       : "scattered across topics";
-  const bets =
-    v.betCount > 0
-      ? `, ${v.betCount} bet${v.betCount === 1 ? "" : "s"} called`
-      : "";
-  return `chat is ${energy}, ${subject}${bets}`;
+  return `chat is ${energy}, ${subject}`;
 }
 
-/** The lightweight-AI layer made visible: crowd sentiment, leaders, trends. */
+/** The lightweight-AI layer made visible: crowd sentiment + who's loudest. */
 export function VibePanel({ vibe }: { vibe: VibeSnapshot }) {
   const color = meterColor(vibe.meter);
 
   return (
-    <section className="panel grid grid-cols-2 gap-x-4 gap-y-3 px-4 py-3 lg:grid-cols-[1.2fr_1fr_1.3fr_auto]">
-      {/* vibe meter */}
-      <div className="col-span-2 lg:col-span-1">
+    <section className="panel grid grid-cols-1 gap-x-8 gap-y-3 px-4 py-3 sm:grid-cols-[1.4fr_1fr]">
+      {/* vibe check */}
+      <div>
         <p className="display-label mb-1.5 text-[9px] text-muted">Vibe Check</p>
         <div className="flex items-baseline gap-2.5">
           <span className="flourish text-[26px] leading-none" style={{ color }}>
@@ -69,7 +65,7 @@ export function VibePanel({ vibe }: { vibe: VibeSnapshot }) {
           <p className="text-[11px] text-faint">—</p>
         ) : (
           <ol className="space-y-0.5">
-            {vibe.topChatters.slice(0, 3).map((c, i) => (
+            {vibe.topChatters.slice(0, 4).map((c, i) => (
               <li key={`${c.platform}:${c.username}`} className="flex items-center gap-1.5">
                 <span className="tabular w-3 text-[10px] text-faint">{i + 1}</span>
                 <Hover
@@ -99,37 +95,6 @@ export function VibePanel({ vibe }: { vibe: VibeSnapshot }) {
             ))}
           </ol>
         )}
-      </div>
-
-      {/* trending keywords */}
-      <div>
-        <p className="display-label mb-1.5 text-[9px] text-muted">Chat Is On</p>
-        {vibe.keywords.length === 0 ? (
-          <p className="text-[11px] text-faint">listening…</p>
-        ) : (
-          <div className="flex flex-wrap gap-1">
-            {vibe.keywords.slice(0, 6).map((k) => (
-              <span
-                key={k}
-                className="rounded-md border border-gold/20 bg-gold/5 px-1.5 py-0.5 font-mono text-[10px] text-gold-soft"
-              >
-                {k}
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* counters */}
-      <div className="flex gap-5 lg:flex-col lg:gap-1.5">
-        <div>
-          <p className="display-label text-[9px] text-muted">Msgs/min</p>
-          <p className="tabular text-lg leading-tight text-cream">{Math.round(vibe.rate)}</p>
-        </div>
-        <div>
-          <p className="display-label text-[9px] text-muted">Bets called</p>
-          <p className="tabular gold-text text-lg leading-tight">{vibe.betCount}</p>
-        </div>
       </div>
     </section>
   );

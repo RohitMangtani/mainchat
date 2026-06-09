@@ -37,33 +37,26 @@ export function PlatformIcon({
   return <XIcon {...props} />;
 }
 
-/** Mainchat / Market Bubble monogram — a gold bubble holding the brand initial. */
-export function BubbleMark({
-  letter = "M",
-  ...props
-}: { letter?: string } & IconProps) {
+/** One-color mark in the show's register: a square speech bubble whose
+ *  outline is broken by a stock-chart line exiting the top-right as an
+ *  upward arrow, bubble tail at bottom-left. Renders in currentColor. */
+export function BubbleMark(props: IconProps) {
   return (
-    <svg viewBox="0 0 40 40" aria-hidden {...props}>
-      <defs>
-        <linearGradient id="bubble-gold" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#ffe27a" />
-          <stop offset="0.55" stopColor="#f5c400" />
-          <stop offset="1" stopColor="#9a7700" />
-        </linearGradient>
-      </defs>
-      <circle cx="20" cy="20" r="18.5" fill="none" stroke="url(#bubble-gold)" strokeWidth="2.4" />
-      <circle cx="27.5" cy="11.5" r="3.4" fill="url(#bubble-gold)" />
-      <text
-        x="20"
-        y="26.5"
-        textAnchor="middle"
-        fontFamily="var(--font-unbounded), sans-serif"
-        fontWeight="900"
-        fontSize="17"
-        fill="url(#bubble-gold)"
-      >
-        {letter}
-      </text>
+    <svg
+      viewBox="0 0 40 40"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      {...props}
+    >
+      {/* bubble outline with an open gap at the top-right + tail bottom-left */}
+      <path d="M22 8 H9 a3 3 0 0 0-3 3 v14 a3 3 0 0 0 3 3 h2 v6 l6-6 h13 a3 3 0 0 0 3-3 V17" />
+      {/* the chart line escaping through the gap as an arrow */}
+      <path d="M12 21 l5-5 3 3 6-7 2.5 2.5 L34 8" />
+      <path d="M29.5 7 H35 v5.5" />
     </svg>
   );
 }

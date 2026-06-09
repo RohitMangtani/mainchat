@@ -11,6 +11,27 @@ function meterColor(meter: number) {
   return "#ff4d5e";
 }
 
+/** One-line extractive summary of the last 90s of chat — composed locally
+ *  from the vibe window, refreshed every snapshot. */
+function pulseLine(v: VibeSnapshot): string {
+  if (v.rate < 1) return "chat is quiet — waiting for the crowd";
+  const energy =
+    v.meter >= 62
+      ? "running hot"
+      : v.meter < 45
+        ? "turning sour"
+        : "holding steady";
+  const subject =
+    v.keywords.length > 0
+      ? `locked on ${v.keywords.slice(0, 2).join(" and ")}`
+      : "scattered across topics";
+  const bets =
+    v.betCount > 0
+      ? `, ${v.betCount} bet${v.betCount === 1 ? "" : "s"} called`
+      : "";
+  return `chat is ${energy}, ${subject}${bets}`;
+}
+
 /** The lightweight-AI layer made visible: crowd sentiment, leaders, trends. */
 export function VibePanel({ vibe }: { vibe: VibeSnapshot }) {
   const color = meterColor(vibe.meter);
@@ -36,6 +57,9 @@ export function VibePanel({ vibe }: { vibe: VibeSnapshot }) {
             }}
           />
         </div>
+        <p className="mt-1.5 truncate text-[11px] text-muted" title={pulseLine(vibe)}>
+          {pulseLine(vibe)}
+        </p>
       </div>
 
       {/* top chatters */}

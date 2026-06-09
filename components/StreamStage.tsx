@@ -100,37 +100,33 @@ export function StreamStage({
     [kickChannel],
   );
 
-  const players: Record<"twitch" | "kick", React.ReactNode> = {
-    twitch: twitchSrc ? (
-      <iframe
-        key={twitchSrc}
-        src={twitchSrc}
-        className="h-full w-full"
-        allowFullScreen
-        allow="autoplay; fullscreen"
-        title="Twitch stream"
-      />
-    ) : (
-      <EmptySlot platform="twitch" />
-    ),
-    kick: kickSrc ? (
-      <iframe
-        key={kickSrc}
-        src={kickSrc}
-        className="h-full w-full"
-        allowFullScreen
-        allow="autoplay; fullscreen"
-        title="Kick stream"
-      />
-    ) : (
-      <EmptySlot platform="kick" />
-    ),
-  };
-
   const pipSmall = pipMain === "twitch" ? "kick" : "twitch";
 
+  // Both players live at FIXED positions in the element tree across every
+  // mode — only classNames change. React therefore never remounts the
+  // iframes, so switching layouts never reloads the streams or drops audio.
+  const wrapperClass = (p: "twitch" | "kick"): string => {
+    if (mode === "split") {
+      return "relative aspect-video w-full md:aspect-auto md:h-full md:min-h-0";
+    }
+    if (mode === "twitch" || mode === "kick") {
+      return mode === p
+        ? "relative col-span-full h-full w-full"
+        : "absolute h-0 w-0 overflow-hidden";
+    }
+    // pip
+    return pipMain === p
+      ? "absolute inset-0"
+      : "absolute bottom-3 right-3 z-10 aspect-video w-[30%] min-w-[160px] overflow-hidden rounded-lg border border-gold/30 shadow-[0_10px_40px_rgba(0,0,0,0.7)]";
+  };
+
+  const stageClass =
+    mode === "split"
+      ? "relative grid w-full grid-cols-1 gap-px bg-black md:min-h-0 md:flex-1 md:auto-rows-fr md:grid-cols-2"
+      : "relative aspect-video max-h-[62vh] w-full bg-black md:aspect-auto md:min-h-0 md:max-h-none md:flex-1";
+
   return (
-    <section className="panel relative flex flex-col overflow-hidden">
+    <section className="panel relative flex flex-col overflow-hidden md:min-h-0 md:flex-1">
       {/* stage toolbar */}
       <div className="flex items-center gap-2 border-b hairline px-3 py-2">
         <h2 className="display-label text-[10px] text-gold">Stage</h2>
@@ -157,29 +153,50 @@ export function StreamStage({
         </div>
       </div>
 
-      {/* players */}
-      <div className="relative aspect-video max-h-[62vh] w-full bg-black md:aspect-auto md:h-full md:min-h-0 md:flex-1">
-        {mode === "split" && (
-          <div className="grid h-full grid-cols-1 gap-px md:grid-cols-2">
-            <div className="relative h-full min-h-[180px]">{players.twitch}</div>
-            <div className="relative h-full min-h-[180px]">{players.kick}</div>
-          </div>
-        )}
-        {(mode === "twitch" || mode === "kick") && (
-          <div className="h-full">{players[mode]}</div>
-        )}
-        {mode === "pip" && (
-          <div className="relative h-full">
-            <div className="h-full">{players[pipMain]}</div>
+      {/* players — same two children in every mode, layout is pure CSS */}
+      <div className={stageClass}>
+        <div className={wrapperClass("twitch")}>
+          {twitchSrc ? (
+            <iframe
+              src={twitchSrc}
+              className="absolute inset-0 h-full w-full"
+              allowFullScreen
+              allow="autoplay; fullscreen"
+              title="Twitch stream"
+            />
+          ) : (
+            <EmptySlot platform="twitch" />
+          )}
+          {mode === "pip" && pipMain !== "twitch" && (
             <button
-              onClick={() => setPipMain(pipSmall)}
+              onClick={() => setPipMain("twitch")}
               title="Swap streams"
-              className="absolute bottom-3 right-3 z-10 aspect-video w-[30%] min-w-[160px] overflow-hidden rounded-lg border border-gold/30 shadow-[0_10px_40px_rgba(0,0,0,0.7)] transition-transform hover:scale-[1.03]"
-            >
-              <div className="pointer-events-none h-full w-full">{players[pipSmall]}</div>
-            </button>
-          </div>
-        )}
+              className="absolute inset-0 z-10 transition-colors hover:bg-white/5"
+              aria-label="Make Twitch the main stream"
+            />
+          )}
+        </div>
+        <div className={wrapperClass("kick")}>
+          {kickSrc ? (
+            <iframe
+              src={kickSrc}
+              className="absolute inset-0 h-full w-full"
+              allowFullScreen
+              allow="autoplay; fullscreen"
+              title="Kick stream"
+            />
+          ) : (
+            <EmptySlot platform="kick" />
+          )}
+          {mode === "pip" && pipMain !== "kick" && (
+            <button
+              onClick={() => setPipMain("kick")}
+              title="Swap streams"
+              className="absolute inset-0 z-10 transition-colors hover:bg-white/5"
+              aria-label="Make Kick the main stream"
+            />
+          )}
+        </div>
 
         {/* live overlays */}
         <div className="pointer-events-none absolute left-3 top-3 z-10 flex gap-2">

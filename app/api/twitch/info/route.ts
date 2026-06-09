@@ -91,6 +91,19 @@ async function fetchHelix(channel: string): Promise<InfoResponse | null> {
 
 // ── decapi (zero-config fallback) ────────────────────────────────────────────
 
+// decapi answers HTTP 200 for everything — real counts, "<channel> is
+// offline", "User not found", and even its own upstream Twitch errors — so
+// outcomes must be distinguished by body content. Anything we can't
+// positively classify returns null (→ ok:false), never fake "offline" data.
+function looksLikeDecapiError(text: string): boolean {
+  return (
+    text.startsWith("[Error") ||
+    /^user not found/i.test(text) ||
+    /^no user with the name/i.test(text) ||
+    /^a username has to be specified/i.test(text)
+  );
+}
+
 async function fetchDecapi(channel: string): Promise<InfoResponse | null> {
   try {
     const enc = encodeURIComponent(channel);
@@ -102,13 +115,17 @@ async function fetchDecapi(channel: string): Promise<InfoResponse | null> {
 
     const countText = (await countRes.text()).trim();
     const titleText = titleRes.ok ? (await titleRes.text()).trim() : "";
-    const viewers = /^\d+$/.test(countText) ? parseInt(countText, 10) : null;
-    // decapi returns prose ("<channel> is offline") when not live
-    const live = viewers !== null;
-    const title =
-      titleText && !/error|not found|no user/i.test(titleText) ? titleText : null;
 
-    return { ok: true, live, viewers, title };
+    if (looksLikeDecapiError(countText)) return null;
+
+    const viewers = /^\d+$/.test(countText) ? parseInt(countText, 10) : null;
+    const offline = /\bis offline\b/i.test(countText);
+    if (viewers === null && !offline) return null; // unclassifiable prose
+
+    const title =
+      titleText && !looksLikeDecapiError(titleText) ? titleText : null;
+
+    return { ok: true, live: viewers !== null, viewers, title };
   } catch {
     return null;
   }

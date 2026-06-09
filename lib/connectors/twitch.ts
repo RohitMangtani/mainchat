@@ -261,7 +261,8 @@ export class TwitchConnector implements Connector {
       ws.send("PASS SCHMOOPIIE");
       ws.send(`NICK ${nick}`);
       ws.send(`JOIN #${this.channel}`);
-      this.reconnectDelay = BACKOFF_MIN_MS;
+      // NOTE: backoff resets on confirmed JOIN (366/first PRIVMSG), not here —
+      // an open-then-immediate-close failure must keep growing the delay.
       this.scheduleInfoPoll(INFO_FIRST_DELAY_MS);
     };
 
@@ -314,6 +315,7 @@ export class TwitchConnector implements Connector {
       case "PRIVMSG":
         if (!this.joined) {
           this.joined = true;
+          this.reconnectDelay = BACKOFF_MIN_MS;
           this.emitStatus("connected", `joined #${this.channel}`);
         }
         this.handlePrivmsg(parsed);
@@ -321,6 +323,7 @@ export class TwitchConnector implements Connector {
       case "366": // end of NAMES list — we are in the channel
         if (!this.joined) {
           this.joined = true;
+          this.reconnectDelay = BACKOFF_MIN_MS;
           this.emitStatus("connected", `joined #${this.channel}`);
         }
         break;

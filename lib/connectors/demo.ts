@@ -217,6 +217,11 @@ export class DemoConnector implements Connector {
   private timer: ReturnType<typeof setTimeout> | null = null;
   private running = false;
   private counter = 0;
+  /** Per-instance nonce — the demo connector restarts whenever platform
+   *  toggles change, and a fresh counter alone would reissue ids already in
+   *  the feed, colliding React keys. */
+  private readonly runId =
+    Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   /** Indices into TEMPLATES emitted recently — avoid repeats. */
   private recentTemplates: number[] = [];
   /** Remaining messages in the current burst (a "moment" happened). */
@@ -280,7 +285,7 @@ export class DemoConnector implements Connector {
 
     this.counter += 1;
     const msg: ChatMessage = {
-      id: `demo-${this.counter}`,
+      id: `demo-${this.runId}-${this.counter}`,
       platform,
       username: persona.handle,
       displayName: persona.displayName,

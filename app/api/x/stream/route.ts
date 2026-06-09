@@ -3,6 +3,37 @@ import { NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
 
 const SEARCH_URL = "https://api.twitter.com/2/tweets/search/recent";
+// X recent search caps queries at 512 chars (basic tier)
+const MAX_QUERY_LEN = 512;
+
+// ── Per-IP token bucket ──────────────────────────────────────────────────────
+// This route spends the operator's PAID X API quota, so it must not be an
+// open proxy. The legitimate client polls every 25s; 6/min per IP leaves
+// headroom without letting a curl loop drain the monthly read cap.
+// In-memory state is per serverless instance — not airtight, but it removes
+// the trivial single-source abuse path at zero infra cost.
+const BUCKET_CAPACITY = 6;
+const BUCKET_REFILL_MS = 10_000; // one token back every 10s
+const buckets = new Map<string, { tokens: number; lastRefill: number }>();
+
+function allowRequest(ip: string): boolean {
+  const now = Date.now();
+  let b = buckets.get(ip);
+  if (!b) {
+    b = { tokens: BUCKET_CAPACITY, lastRefill: now };
+    buckets.set(ip, b);
+  }
+  const refill = Math.floor((now - b.lastRefill) / BUCKET_REFILL_MS);
+  if (refill > 0) {
+    b.tokens = Math.min(BUCKET_CAPACITY, b.tokens + refill);
+    b.lastRefill = now;
+  }
+  if (b.tokens <= 0) return false;
+  b.tokens -= 1;
+  // keep the map from growing unboundedly
+  if (buckets.size > 5000) buckets.clear();
+  return true;
+}
 
 interface ApiTweet {
   id: string;
@@ -91,10 +122,22 @@ export async function GET(request: Request): Promise<Response> {
   if (!query) {
     return NextResponse.json({ error: "Missing required 'query' parameter" }, { status: 400 });
   }
+  if (query.length > MAX_QUERY_LEN) {
+    return NextResponse.json({ error: "query too long" }, { status: 400 });
+  }
 
   const token = process.env.X_BEARER_TOKEN;
   if (!token) {
     return NextResponse.json({ configured: false, tweets: [], newestId: null });
+  }
+
+  const ip =
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  if (!allowRequest(ip)) {
+    return NextResponse.json(
+      { configured: true, rateLimited: true, tweets: [], newestId: null },
+      { status: 429 },
+    );
   }
 
   const sinceId = url.searchParams.get("sinceId");

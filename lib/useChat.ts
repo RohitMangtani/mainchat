@@ -37,6 +37,8 @@ export interface UseChatResult {
   setPaused: (p: boolean) => void;
   /** Messages held while paused. */
   pendingCount: number;
+  /** Monotonic count of every message ever ingested this session. */
+  totalCount: number;
   /** Flush held messages and unpause. */
   resume: () => void;
   clearFeed: () => void;
@@ -73,11 +75,15 @@ export function useChat(config: AppConfig): UseChatResult {
   const [vibe, setVibe] = useState<VibeSnapshot>(emptyVibe);
   const [paused, setPausedState] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
 
   // Refs back the hot ingest path so connector callbacks stay stable across
   // renders and never close over stale state.
   const bufferRef = useRef<ChatMessage[]>([]);
   const heldRef = useRef<ChatMessage[]>([]);
+  /** true count of messages that arrived while paused (heldRef itself is capped) */
+  const heldCountRef = useRef(0);
+  const totalRef = useRef(0);
   const pausedRef = useRef(false);
   const trackerRef = useRef<VibeTracker | null>(null);
   if (trackerRef.current === null) {
@@ -85,12 +91,18 @@ export function useChat(config: AppConfig): UseChatResult {
   }
 
   // ── Shared ingest path (all connectors funnel through here) ──────────────
+  // No setState here: at hundreds of messages/minute each WebSocket frame is
+  // its own macrotask, so per-message setState would defeat the 120ms batching
+  // (counts are published from the flush tick instead).
   const ingest = useCallback((msg: ChatMessage) => {
     const enriched: ChatMessage = { ...msg, vibe: scoreMessage(msg.text) };
     trackerRef.current?.add(enriched);
+    totalRef.current += 1;
     if (pausedRef.current) {
       heldRef.current.push(enriched);
-      setPendingCount(heldRef.current.length);
+      heldCountRef.current += 1;
+      // anything past the render cap would be discarded on resume anyway
+      if (heldRef.current.length > MAX_MESSAGES) heldRef.current.shift();
     } else {
       bufferRef.current.push(enriched);
     }
@@ -107,8 +119,9 @@ export function useChat(config: AppConfig): UseChatResult {
     [],
   );
 
-  // Full replacement — used when a platform goes unconfigured/disabled so
-  // stale detail/viewers/live flags don't linger.
+  // Full replacement — used at every connector swap (channel change,
+  // unconfigured, disabled) so stale detail/viewers/live/title from the
+  // previous channel never get attributed to the new one by mergeStatus.
   const replaceStatus = useCallback(
     (platform: PlatformId, state: ConnState) => {
       setStatuses((prev) => ({ ...prev, [platform]: { state } }));
@@ -130,6 +143,7 @@ export function useChat(config: AppConfig): UseChatResult {
   useEffect(() => {
     const channel = config.twitchChannel.trim();
     if (config.enabled.twitch && channel !== "") {
+      replaceStatus("twitch", "connecting");
       const connector: Connector = new TwitchConnector(
         channel,
         makeEvents("twitch"),
@@ -147,6 +161,7 @@ export function useChat(config: AppConfig): UseChatResult {
   useEffect(() => {
     const channel = config.kickChannel.trim();
     if (config.enabled.kick && channel !== "") {
+      replaceStatus("kick", "connecting");
       const connector: Connector = new KickConnector(
         channel,
         makeEvents("kick"),
@@ -164,6 +179,7 @@ export function useChat(config: AppConfig): UseChatResult {
   useEffect(() => {
     const query = config.xQuery.trim();
     if (config.enabled.x && query !== "") {
+      replaceStatus("x", "connecting");
       const connector: Connector = new XConnector(query, makeEvents("x"));
       connector.start();
       return () => {
@@ -206,17 +222,24 @@ export function useChat(config: AppConfig): UseChatResult {
   }, [config.demoMode, enabledKey, ingest, mergeStatus]);
 
   // ── Flush tick: drain the buffer into React state in one setState ────────
+  // Counts publish here too (with bail-outs), so the render cadence stays
+  // capped at ~8/s no matter how fast messages arrive — paused or not.
   useEffect(() => {
     const id = window.setInterval(() => {
-      if (bufferRef.current.length === 0) return;
-      const batch = bufferRef.current;
-      bufferRef.current = [];
-      setMessages((prev) => {
-        const next = prev.concat(batch);
-        return next.length > MAX_MESSAGES
-          ? next.slice(next.length - MAX_MESSAGES)
-          : next;
-      });
+      if (bufferRef.current.length > 0) {
+        const batch = bufferRef.current;
+        bufferRef.current = [];
+        setMessages((prev) => {
+          const next = prev.concat(batch);
+          return next.length > MAX_MESSAGES
+            ? next.slice(next.length - MAX_MESSAGES)
+            : next;
+        });
+      }
+      setPendingCount((c) =>
+        c === heldCountRef.current ? c : heldCountRef.current,
+      );
+      setTotalCount((c) => (c === totalRef.current ? c : totalRef.current));
     }, FLUSH_INTERVAL_MS);
     return () => {
       window.clearInterval(id);
@@ -245,6 +268,7 @@ export function useChat(config: AppConfig): UseChatResult {
       bufferRef.current = bufferRef.current.concat(heldRef.current);
       heldRef.current = [];
     }
+    heldCountRef.current = 0;
     setPendingCount(0);
     pausedRef.current = false;
     setPausedState(false);
@@ -253,6 +277,7 @@ export function useChat(config: AppConfig): UseChatResult {
   const clearFeed = useCallback(() => {
     bufferRef.current = [];
     heldRef.current = [];
+    heldCountRef.current = 0;
     setPendingCount(0);
     setMessages([]);
   }, []);
@@ -264,6 +289,7 @@ export function useChat(config: AppConfig): UseChatResult {
     paused,
     setPaused,
     pendingCount,
+    totalCount,
     resume,
     clearFeed,
   };

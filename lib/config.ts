@@ -23,17 +23,44 @@ export const BLANK_DEFAULTS: AppConfig = {
   brandName: "",
 };
 
+function str(value: unknown, fallback: string): string {
+  return typeof value === "string" ? value : fallback;
+}
+
+function bool(value: unknown, fallback: boolean): boolean {
+  return typeof value === "boolean" ? value : fallback;
+}
+
 export function loadConfig(): AppConfig {
   if (typeof window === "undefined") return MARKET_BUBBLE_DEFAULTS;
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return MARKET_BUBBLE_DEFAULTS;
-    const parsed = JSON.parse(raw) as Partial<AppConfig>;
-    // merge so new fields added in future versions pick up defaults
+    const parsed: unknown = JSON.parse(raw);
+    if (typeof parsed !== "object" || parsed === null) {
+      return MARKET_BUBBLE_DEFAULTS;
+    }
+    // field-by-field coercion: a wrong-typed persisted value (manual edits,
+    // older versions) falls back to its default instead of bricking the boot
+    const p = parsed as Record<string, unknown>;
+    const en =
+      typeof p.enabled === "object" && p.enabled !== null
+        ? (p.enabled as Record<string, unknown>)
+        : {};
+    const d = MARKET_BUBBLE_DEFAULTS;
     return {
-      ...MARKET_BUBBLE_DEFAULTS,
-      ...parsed,
-      enabled: { ...MARKET_BUBBLE_DEFAULTS.enabled, ...(parsed.enabled ?? {}) },
+      twitchChannel: str(p.twitchChannel, d.twitchChannel),
+      kickChannel: str(p.kickChannel, d.kickChannel),
+      xQuery: str(p.xQuery, d.xQuery),
+      enabled: {
+        twitch: bool(en.twitch, d.enabled.twitch),
+        kick: bool(en.kick, d.enabled.kick),
+        x: bool(en.x, d.enabled.x),
+      },
+      demoMode: bool(p.demoMode, d.demoMode),
+      brandPreset: p.brandPreset === "custom" ? "custom" : "marketbubble",
+      brandName: str(p.brandName, d.brandName),
+      toxicityFilter: bool(p.toxicityFilter, d.toxicityFilter),
     };
   } catch {
     return MARKET_BUBBLE_DEFAULTS;

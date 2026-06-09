@@ -19,6 +19,7 @@ function stateDot(state: ConnState, live?: boolean) {
   if (state === "connected") return live ? "#3df59b" : "#f5c400";
   if (state === "connecting" || state === "reconnecting") return "#f5c400";
   if (state === "error") return "#ff4d5e";
+  if (state === "unconfigured") return "#b98f00"; // needs setup ≠ switched off
   return "#55545e";
 }
 

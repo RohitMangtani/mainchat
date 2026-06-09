@@ -12,6 +12,7 @@ export function ChatFeed({
   messages,
   paused,
   pendingCount,
+  totalCount,
   onPause,
   onResume,
   onClear,
@@ -20,6 +21,7 @@ export function ChatFeed({
   messages: ChatMessage[];
   paused: boolean;
   pendingCount: number;
+  totalCount: number;
   onPause: () => void;
   onResume: () => void;
   onClear: () => void;
@@ -28,8 +30,12 @@ export function ChatFeed({
   const scrollRef = useRef<HTMLDivElement>(null);
   const stickRef = useRef(true);
   const [stuck, setStuck] = useState(true);
-  const [missed, setMissed] = useState(0);
+  // totalCount high-water mark at the moment the user was last at the bottom —
+  // "N new" is a real message count, not a count of flush batches
+  const [seenTotal, setSeenTotal] = useState(0);
   const [filters, setFilters] = useState<Set<PlatformId>>(new Set(ALL_PLATFORMS));
+
+  const missed = Math.max(0, totalCount - seenTotal);
 
   const visible = useMemo(
     () =>
@@ -45,11 +51,9 @@ export function ChatFeed({
     if (!el) return;
     if (stickRef.current) {
       el.scrollTop = el.scrollHeight;
-      setMissed(0);
-    } else {
-      setMissed((m) => m + 1);
+      setSeenTotal(totalCount);
     }
-  }, [visible]);
+  }, [visible, totalCount]);
 
   const handleScroll = () => {
     const el = scrollRef.current;
@@ -57,7 +61,7 @@ export function ChatFeed({
     const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 48;
     stickRef.current = nearBottom;
     setStuck(nearBottom);
-    if (nearBottom) setMissed(0);
+    if (nearBottom) setSeenTotal(totalCount);
   };
 
   const jumpToLive = () => {
@@ -65,7 +69,7 @@ export function ChatFeed({
     if (el) el.scrollTop = el.scrollHeight;
     stickRef.current = true;
     setStuck(true);
-    setMissed(0);
+    setSeenTotal(totalCount);
     if (paused) onResume();
   };
 

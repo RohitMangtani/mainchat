@@ -112,6 +112,7 @@ export function Dashboard() {
             messages={chat.messages}
             paused={chat.paused}
             pendingCount={chat.pendingCount}
+            totalCount={chat.totalCount}
             onPause={() => chat.setPaused(true)}
             onResume={chat.resume}
             onClear={chat.clearFeed}

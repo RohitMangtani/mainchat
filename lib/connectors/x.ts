@@ -73,6 +73,8 @@ export class XConnector implements Connector {
   private sinceId: string | null = null;
   private firstBatch = true;
   private unconfigured = false;
+  /** 401/403/400 from X — polling fast can't fix these */
+  private permanentError = false;
   private rateBackoff = false;
   private lastStatusKey = "";
   private idCounter = 0;
@@ -121,7 +123,10 @@ export class XConnector implements Connector {
   }
 
   private currentIntervalMs(): number {
-    if (this.unconfigured) return UNCONFIGURED_POLL_MS;
+    // permanent failures (bad token / bad query) and the unconfigured state
+    // poll slowly — enough to self-heal when the operator fixes the cause,
+    // without hammering a request that cannot succeed
+    if (this.unconfigured || this.permanentError) return UNCONFIGURED_POLL_MS;
     return this.rateBackoff ? POLL_MS * 2 : POLL_MS;
   }
 
@@ -179,12 +184,30 @@ export class XConnector implements Connector {
 
     const apiError = asString(body.error);
     if (apiError !== null) {
-      this.emitStatus({ state: "reconnecting", detail: `X API error ${apiError} — retrying` });
+      // 401/403 = bad or revoked token, 400 = malformed query — retrying at
+      // full cadence can't fix these, so surface a real error state instead
+      // of an eternal yellow "reconnecting"
+      if (apiError === "401" || apiError === "403") {
+        this.permanentError = true;
+        this.emitStatus({
+          state: "error",
+          detail: "X rejected the API token (check X_BEARER_TOKEN)",
+        });
+      } else if (apiError === "400") {
+        this.permanentError = true;
+        this.emitStatus({
+          state: "error",
+          detail: "X rejected the search query — edit it in settings",
+        });
+      } else {
+        this.emitStatus({ state: "reconnecting", detail: `X API error ${apiError} — retrying` });
+      }
       return;
     }
 
     // Clean response.
     this.rateBackoff = false;
+    this.permanentError = false;
     this.emitStatus({
       state: "connected",
       detail: `watching X for: ${truncateQuery(this.query)}`,

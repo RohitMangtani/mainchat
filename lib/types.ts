@@ -77,8 +77,11 @@ export interface Connector {
 
 export interface AppConfig {
   twitchChannel: string;
+  /** optional second Twitch stream (e.g. the co-host's channel) — its chat
+   *  merges into the feed and it can fill the second stage slot */
+  twitchChannel2: string;
   kickChannel: string;
-  /** X search query (recent search syntax) */
+  /** X source: "@handle" → live broadcast chat; anything else → search */
   xQuery: string;
   enabled: Record<PlatformId, boolean>;
   demoMode: boolean;

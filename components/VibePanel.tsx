@@ -33,7 +33,7 @@ export function VibePanel({ vibe }: { vibe: VibeSnapshot }) {
   const color = meterColor(vibe.meter);
 
   return (
-    <section className="panel grid grid-cols-1 gap-x-8 gap-y-3 px-4 py-3 sm:grid-cols-[1.4fr_1fr]">
+    <section className="panel grid grid-cols-[1.4fr_1fr] gap-x-4 gap-y-3 px-3.5 py-2.5 sm:gap-x-8 sm:px-4 sm:py-3">
       {/* vibe check */}
       <div>
         <p className="display-label mb-1.5 text-[9px] text-muted">Vibe Check</p>
@@ -65,7 +65,7 @@ export function VibePanel({ vibe }: { vibe: VibeSnapshot }) {
           <p className="text-[11px] text-faint">—</p>
         ) : (
           <ol className="space-y-0.5">
-            {vibe.topChatters.slice(0, 4).map((c, i) => (
+            {vibe.topChatters.slice(0, 3).map((c, i) => (
               <li key={`${c.platform}:${c.username}`} className="flex items-center gap-1.5">
                 <span className="tabular w-3 text-[10px] text-faint">{i + 1}</span>
                 <Hover

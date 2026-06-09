@@ -5,14 +5,7 @@ import type { PlatformId, PlatformStatus } from "@/lib/types";
 import { PLATFORM_META } from "./PlatformBadge";
 import { Hover } from "./Tooltip";
 
-export type StageMode = "split" | "twitch" | "kick" | "pip";
-
-const MODES: { id: StageMode; label: string }[] = [
-  { id: "split", label: "SPLIT" },
-  { id: "twitch", label: "TWITCH" },
-  { id: "kick", label: "KICK" },
-  { id: "pip", label: "PIP" },
-];
+export type StageMode = "split" | "a" | "b" | "pip";
 
 function viewerLabel(n: number | null | undefined) {
   if (n == null) return "—";
@@ -21,18 +14,19 @@ function viewerLabel(n: number | null | undefined) {
 }
 
 function LiveTag({
-  platform,
+  name,
+  color,
   status,
 }: {
-  platform: "twitch" | "kick";
-  status: PlatformStatus;
+  name: string;
+  color: string;
+  status: Pick<PlatformStatus, "live" | "viewers" | "streamTitle">;
 }) {
-  const meta = PLATFORM_META[platform];
   return (
     <Hover
       tip={
         <span>
-          Coming from <b style={{ color: meta.color }}>{meta.name}</b>
+          Coming from <b style={{ color }}>{name}</b>
           <span className="mt-1 block text-muted">
             {status.live ? `live · ${viewerLabel(status.viewers)} watching` : "offline"}
             {status.streamTitle ? ` · ${status.streamTitle}` : ""}
@@ -49,8 +43,8 @@ function LiveTag({
             background: status.live ? "#d11226" : "#55545e",
           }}
         />
-        <span className="font-mono text-[9px] tracking-widest" style={{ color: meta.color }}>
-          {meta.name.toUpperCase()}
+        <span className="font-mono text-[9px] tracking-widest" style={{ color }}>
+          {name.toUpperCase()}
         </span>
         <span className="tabular text-[10px] text-cream/80">
           {status.live ? viewerLabel(status.viewers) : "OFF"}
@@ -60,27 +54,35 @@ function LiveTag({
   );
 }
 
-function EmptySlot({ platform }: { platform: "twitch" | "kick" }) {
+function EmptySlot({ hint }: { hint: string }) {
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-1.5 bg-ink-1">
-      <p className="flourish text-lg text-faint">no {platform} channel set</p>
-      <p className="font-mono text-[10px] tracking-wider text-faint">ADD ONE IN SETTINGS</p>
+    <div className="flex h-full flex-col items-center justify-center gap-1.5 bg-ink-1 px-3 text-center">
+      <p className="flourish text-sm text-faint sm:text-lg">{hint}</p>
+      <p className="hidden font-mono text-[10px] tracking-wider text-faint sm:block">
+        CONFIGURE IN SETTINGS
+      </p>
     </div>
   );
 }
 
-/** Embedded live players — split, solo, or picture-in-picture. No tab switching, ever. */
+/**
+ * Embedded live players — split, solo, or picture-in-picture. Slot A is the
+ * primary Twitch stream; slot B is the Kick stream when configured, else the
+ * optional second Twitch stream (the co-host). No tab switching, ever.
+ */
 export function StreamStage({
   twitchChannel,
+  twitchChannel2,
   kickChannel,
   statuses,
 }: {
   twitchChannel: string;
+  twitchChannel2: string;
   kickChannel: string;
   statuses: Record<PlatformId, PlatformStatus>;
 }) {
   const [mode, setMode] = useState<StageMode>("split");
-  const [pipMain, setPipMain] = useState<"twitch" | "kick">("twitch");
+  const [pipMain, setPipMain] = useState<"a" | "b">("a");
   const [host, setHost] = useState<string | null>(null);
 
   // Twitch's embed requires the embedding hostname as a `parent` param —
@@ -89,31 +91,99 @@ export function StreamStage({
     setHost(window.location.hostname);
   }, []);
 
-  const twitchSrc = useMemo(
-    () =>
-      host && twitchChannel
-        ? `https://player.twitch.tv/?channel=${encodeURIComponent(twitchChannel)}&parent=${host}&muted=true&autoplay=true`
-        : null,
-    [host, twitchChannel],
-  );
-  const kickSrc = useMemo(
-    () =>
-      kickChannel
-        ? `https://player.kick.com/${encodeURIComponent(kickChannel)}?autoplay=true&muted=true`
-        : null,
-    [kickChannel],
-  );
+  const twitchSrc = (channel: string) =>
+    host && channel
+      ? `https://player.twitch.tv/?channel=${encodeURIComponent(channel)}&parent=${host}&muted=true&autoplay=true`
+      : null;
 
-  const pipSmall = pipMain === "twitch" ? "kick" : "twitch";
+  const slotASrc = twitchSrc(twitchChannel);
+
+  // slot B: Kick wins when configured; otherwise the second Twitch stream
+  const slotB = useMemo(() => {
+    if (kickChannel.trim()) {
+      return {
+        kind: "kick" as const,
+        src: `https://player.kick.com/${encodeURIComponent(kickChannel)}?autoplay=true&muted=true`,
+        label: "KICK",
+        name: "Kick",
+        color: PLATFORM_META.kick.color,
+      };
+    }
+    if (twitchChannel2.trim()) {
+      return {
+        kind: "twitch2" as const,
+        src: null as string | null, // resolved below once host is known
+        label: twitchChannel2.slice(0, 9).toUpperCase(),
+        name: `Twitch · ${twitchChannel2}`,
+        color: PLATFORM_META.twitch.color,
+      };
+    }
+    return {
+      kind: "none" as const,
+      src: null as string | null,
+      label: "—",
+      name: "",
+      color: "#55545e",
+    };
+  }, [kickChannel, twitchChannel2]);
+  const slotBSrc = slotB.kind === "twitch2" ? twitchSrc(twitchChannel2) : slotB.src;
+
+  // live status for a twitch2 slot — polled here (the chat connector for the
+  // second channel deliberately doesn't own a status pill)
+  const [slotBTwitchStatus, setSlotBTwitchStatus] = useState<
+    Pick<PlatformStatus, "live" | "viewers" | "streamTitle">
+  >({});
+  useEffect(() => {
+    if (slotB.kind !== "twitch2") return undefined;
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const res = await fetch(
+          `/api/twitch/info?channel=${encodeURIComponent(twitchChannel2)}`,
+          { cache: "no-store" },
+        );
+        const d: unknown = await res.json();
+        if (cancelled || typeof d !== "object" || d === null) return;
+        const info = d as { ok?: boolean; live?: boolean; viewers?: number | null; title?: string | null };
+        if (info.ok) {
+          setSlotBTwitchStatus({
+            live: info.live === true,
+            viewers: info.viewers ?? null,
+            streamTitle: info.title ?? undefined,
+          });
+        }
+      } catch {
+        // keep last known
+      }
+    };
+    void poll();
+    const id = window.setInterval(() => void poll(), 60_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [slotB.kind, twitchChannel2]);
+
+  const slotBStatus =
+    slotB.kind === "kick" ? statuses.kick : slotBTwitchStatus;
+
+  const MODES: { id: StageMode; label: string }[] = [
+    { id: "split", label: "SPLIT" },
+    { id: "a", label: "TWITCH" },
+    { id: "b", label: slotB.label },
+    { id: "pip", label: "PIP" },
+  ];
+
+  const pipSmall = pipMain === "a" ? "b" : "a";
 
   // Both players live at FIXED positions in the element tree across every
   // mode — only classNames change. React therefore never remounts the
   // iframes, so switching layouts never reloads the streams or drops audio.
-  const wrapperClass = (p: "twitch" | "kick"): string => {
+  const wrapperClass = (p: "a" | "b"): string => {
     if (mode === "split") {
       return "relative aspect-video w-full md:aspect-auto md:h-full md:min-h-0";
     }
-    if (mode === "twitch" || mode === "kick") {
+    if (mode === "a" || mode === "b") {
       return mode === p
         ? "relative col-span-full h-full w-full"
         : "absolute h-0 w-0 overflow-hidden";
@@ -124,10 +194,13 @@ export function StreamStage({
       : "absolute bottom-3 right-3 z-10 aspect-video w-[30%] min-w-[160px] overflow-hidden rounded-lg border border-gold/30 shadow-[0_10px_40px_rgba(0,0,0,0.7)]";
   };
 
+  // Mobile keeps the stage COMPACT so chat owns the screen below it: split
+  // renders the players side-by-side (small but always visible), solo/PiP
+  // cap at 32vh. Desktop lets the stage flex to fill the column.
   const stageClass =
     mode === "split"
-      ? "relative grid w-full grid-cols-1 gap-px bg-black md:min-h-0 md:flex-1 md:auto-rows-fr md:grid-cols-2"
-      : "relative aspect-video max-h-[62vh] w-full bg-black md:aspect-auto md:min-h-0 md:max-h-none md:flex-1";
+      ? "relative grid w-full grid-cols-2 gap-px bg-black md:min-h-0 md:flex-1 md:auto-rows-fr"
+      : "relative aspect-video max-h-[32vh] w-full bg-black md:aspect-auto md:min-h-0 md:max-h-none md:flex-1";
 
   return (
     <section className="panel relative flex flex-col overflow-hidden md:min-h-0 md:flex-1">
@@ -140,12 +213,12 @@ export function StreamStage({
               key={m.id}
               onClick={() => {
                 if (m.id === "pip" && mode === "pip") {
-                  setPipMain((p) => (p === "twitch" ? "kick" : "twitch"));
+                  setPipMain((p) => (p === "a" ? "b" : "a"));
                 } else {
                   setMode(m.id);
                 }
               }}
-              className={`rounded-md px-2.5 py-1 font-mono text-[9px] tracking-widest transition-all ${
+              className={`rounded-md px-2 py-1 font-mono text-[9px] tracking-widest transition-all sm:px-2.5 ${
                 mode === m.id
                   ? "bg-gold/15 text-gold shadow-[inset_0_0_0_1px_rgba(245,196,0,0.3)]"
                   : "text-muted hover:text-cream"
@@ -159,53 +232,59 @@ export function StreamStage({
 
       {/* players — same two children in every mode, layout is pure CSS */}
       <div className={stageClass}>
-        <div className={wrapperClass("twitch")}>
-          {twitchSrc ? (
+        <div className={wrapperClass("a")}>
+          {slotASrc ? (
             <iframe
-              src={twitchSrc}
+              src={slotASrc}
               className="absolute inset-0 h-full w-full"
               allowFullScreen
               allow="autoplay; fullscreen"
-              title="Twitch stream"
+              title="Primary Twitch stream"
             />
           ) : (
-            <EmptySlot platform="twitch" />
+            <EmptySlot hint="no twitch channel set" />
           )}
-          {mode === "pip" && pipMain !== "twitch" && (
+          {mode === "pip" && pipMain !== "a" && (
             <button
-              onClick={() => setPipMain("twitch")}
+              onClick={() => setPipMain("a")}
               title="Swap streams"
               className="absolute inset-0 z-10 transition-colors hover:bg-white/5"
-              aria-label="Make Twitch the main stream"
+              aria-label="Make the primary stream big"
             />
           )}
         </div>
-        <div className={wrapperClass("kick")}>
-          {kickSrc ? (
+        <div className={wrapperClass("b")}>
+          {slotBSrc ? (
             <iframe
-              src={kickSrc}
+              src={slotBSrc}
               className="absolute inset-0 h-full w-full"
               allowFullScreen
               allow="autoplay; fullscreen"
-              title="Kick stream"
+              title="Second stream"
             />
           ) : (
-            <EmptySlot platform="kick" />
+            <EmptySlot hint="second stream slot — kick or a co-host" />
           )}
-          {mode === "pip" && pipMain !== "kick" && (
+          {mode === "pip" && pipMain !== "b" && (
             <button
-              onClick={() => setPipMain("kick")}
+              onClick={() => setPipMain("b")}
               title="Swap streams"
               className="absolute inset-0 z-10 transition-colors hover:bg-white/5"
-              aria-label="Make Kick the main stream"
+              aria-label="Make the second stream big"
             />
           )}
         </div>
 
-        {/* live overlays */}
-        <div className="pointer-events-none absolute left-3 top-3 z-10 flex gap-2">
-          <LiveTag platform="twitch" status={statuses.twitch} />
-          <LiveTag platform="kick" status={statuses.kick} />
+        {/* live overlays — header pills cover status on phones */}
+        <div className="pointer-events-none absolute left-3 top-3 z-10 hidden gap-2 sm:flex">
+          <LiveTag
+            name="Twitch"
+            color={PLATFORM_META.twitch.color}
+            status={statuses.twitch}
+          />
+          {slotB.kind !== "none" && (
+            <LiveTag name={slotB.name} color={slotB.color} status={slotBStatus} />
+          )}
         </div>
       </div>
     </section>

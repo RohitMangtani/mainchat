@@ -181,12 +181,26 @@ export function ConfigPanel({
               </div>
 
               <div className="flex items-start gap-3">
+                <PlatformIcon platform="twitch" className="mt-7 h-4 w-4 shrink-0 opacity-50" style={{ color: PLATFORM_META.twitch.color }} />
+                <div className="flex-1">
+                  <Field
+                    label="Twitch channel 2 (optional)"
+                    value={draft.twitchChannel2}
+                    placeholder="blknoiz06"
+                    onChange={(v) => set("twitchChannel2", v.replace(/^@|\s/g, ""))}
+                    hint="A co-host's stream — its chat merges into the feed and it fills the second stage slot when no Kick channel is set."
+                  />
+                </div>
+                <span className="mt-7 w-9" />
+              </div>
+
+              <div className="flex items-start gap-3">
                 <PlatformIcon platform="kick" className="mt-7 h-4 w-4 shrink-0" style={{ color: PLATFORM_META.kick.color }} />
                 <div className="flex-1">
                   <Field
                     label="Kick channel"
                     value={draft.kickChannel}
-                    placeholder="fazebanks"
+                    placeholder="ready when they add one"
                     onChange={(v) => set("kickChannel", v.replace(/^@|\s/g, ""))}
                   />
                 </div>

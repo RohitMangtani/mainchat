@@ -13,6 +13,7 @@ export function ChatFeed({
   paused,
   pendingCount,
   totalCount,
+  msgRate,
   onPause,
   onResume,
   onClear,
@@ -22,6 +23,8 @@ export function ChatFeed({
   paused: boolean;
   pendingCount: number;
   totalCount: number;
+  /** messages/min across platforms — rows stop animating above ~1 msg/s */
+  msgRate: number;
   onPause: () => void;
   onResume: () => void;
   onClear: () => void;
@@ -63,7 +66,9 @@ export function ChatFeed({
   const handleScroll = () => {
     const el = scrollRef.current;
     if (!el) return;
-    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 48;
+    // ~150px follow threshold — one wheel tick is 100-120px, so anything
+    // tighter makes reading-pause feel hair-triggered
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 150;
     stickRef.current = nearBottom;
     setStuck(nearBottom);
     if (nearBottom) setSeenTotal(totalCount);
@@ -150,11 +155,13 @@ export function ChatFeed({
         </div>
       </header>
 
-      {/* the unified feed */}
+      {/* the unified feed — we manage bottom-pinning ourselves, so browser
+          scroll anchoring is explicitly off; containment keeps row paints
+          from invalidating the page */}
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-1.5"
+        className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-1.5 [contain:layout_paint] [overflow-anchor:none]"
       >
         {visible.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center gap-2 px-8 text-center">
@@ -165,7 +172,14 @@ export function ChatFeed({
             </p>
           </div>
         ) : (
-          visible.map((m) => <MessageRow key={m.id} msg={m} filterToxic={filterToxic} />)
+          visible.map((m) => (
+            <MessageRow
+              key={m.id}
+              msg={m}
+              filterToxic={filterToxic}
+              animate={msgRate < 60}
+            />
+          ))
         )}
       </div>
 

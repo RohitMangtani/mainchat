@@ -88,7 +88,7 @@ function StatusPill({
         </span>
       }
     >
-      <span className="flex cursor-default items-center gap-1.5 rounded-lg border border-white/8 bg-ink-1 px-2.5 py-1.5 transition-colors hover:border-white/15">
+      <span className="flex cursor-default items-center gap-1 rounded-lg border border-white/8 bg-ink-1 px-1.5 py-1.5 transition-colors hover:border-white/15 sm:gap-1.5 sm:px-2.5">
         <PlatformIcon platform={platform} className="h-3 w-3" style={{ color: meta.color }} />
         <span
           className={`h-1.5 w-1.5 rounded-full ${
@@ -97,7 +97,10 @@ function StatusPill({
           style={{ color: dot, background: dot }}
         />
         {viewers && (
-          <span className="tabular text-[11px] text-cream/85">{viewers}</span>
+          // viewer counts yield on phones so the brand never truncates
+          <span className="tabular hidden text-[11px] text-cream/85 sm:inline">
+            {viewers}
+          </span>
         )}
       </span>
     </Hover>
@@ -116,15 +119,15 @@ export function Header({
   onOpenConfig: () => void;
 }) {
   return (
-    <header className="flex items-center gap-3 px-4 py-3 md:px-5">
-      <BubbleMark className="h-8 w-8 shrink-0 text-cream" />
+    <header className="flex items-center gap-2.5 px-3 py-2.5 md:gap-3 md:px-5 md:py-3">
+      <BubbleMark className="h-7 w-7 shrink-0 text-cream md:h-8 md:w-8" />
 
       <div className="min-w-0">
-        <h1 className="display-label truncate text-[14px] font-black leading-tight text-cream">
+        <h1 className="display-label truncate text-[12px] font-black leading-tight tracking-[0.08em] text-cream sm:tracking-[0.2em] md:text-[14px]">
           {brandName.trim() || "Mainchat"}
         </h1>
         {brandPreset === "marketbubble" && (
-          <p className="flourish -mt-px text-[12px] text-muted">
+          <p className="flourish -mt-px hidden text-[12px] text-muted sm:block">
             <span className="text-[#d11226]/90">&ldquo;</span>invest in yourself
             <span className="text-[#d11226]/90">&rdquo;</span>
           </p>

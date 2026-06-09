@@ -167,6 +167,22 @@ export function useChat(config: AppConfig): UseChatResult {
     return undefined;
   }, [config.twitchChannel, config.enabled.twitch, makeEvents, replaceStatus]);
 
+  // ── Second Twitch stream (co-host) — chat merges in; the primary channel
+  // owns the status pill, so this connector's status emissions are dropped ──
+  useEffect(() => {
+    const channel = config.twitchChannel2.trim();
+    if (!config.enabled.twitch || channel === "") return undefined;
+    void emoteResolver.loadChannel("twitch", channel.toLowerCase());
+    const connector: Connector = new TwitchConnector(channel, {
+      onMessage: ingest,
+      onStatus: () => {},
+    });
+    connector.start();
+    return () => {
+      connector.stop();
+    };
+  }, [config.twitchChannel2, config.enabled.twitch, ingest]);
+
   // ── Kick lifecycle ────────────────────────────────────────────────────────
   useEffect(() => {
     const channel = config.kickChannel.trim();

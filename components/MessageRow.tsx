@@ -26,9 +26,12 @@ function formatClock(ts: number) {
 function MessageRowInner({
   msg,
   filterToxic,
+  animate = true,
 }: {
   msg: ChatMessage;
   filterToxic: boolean;
+  /** rows animate in below ~1 msg/s; above that, instant append reads better */
+  animate?: boolean;
 }) {
   const [revealed, setRevealed] = useState(false);
   const meta = PLATFORM_META[msg.platform];
@@ -57,7 +60,9 @@ function MessageRowInner({
 
   return (
     <div
-      className="group animate-msg-in border-l-2 py-[5px] pl-2.5 pr-2 leading-snug transition-colors hover:bg-white/[0.03]"
+      className={`group border-l-2 py-[5px] pl-2.5 pr-2 leading-snug transition-colors hover:bg-white/[0.03] ${
+        animate ? "animate-msg-in" : ""
+      }`}
       style={{ borderLeftColor: `${meta.color}55` }}
     >
       <Hover tip={sourceTip} block>

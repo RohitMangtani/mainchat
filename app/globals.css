@@ -141,6 +141,17 @@
   body.overlay-mode::after {
     display: none;
   }
+
+  /* motion is a garnish, never a requirement */
+  @media (prefers-reduced-motion: reduce) {
+    .animate-marquee,
+    .animate-msg-in,
+    .animate-rise,
+    .animate-pulse-dot,
+    .gold-text {
+      animation: none !important;
+    }
+  }
 }
 
 @layer components {

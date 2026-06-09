@@ -4,8 +4,13 @@ const STORAGE_KEY = "mainchat.config.v1";
 
 /** One-click "Market Bubble Mode" — the pre-configured defaults for the show. */
 export const MARKET_BUBBLE_DEFAULTS: AppConfig = {
+  // the show streams on Banks' channel (verified: its live titles are the
+  // Market Bubble episodes); Ansem's channel fills the second stage slot
   twitchChannel: "fazebanks",
-  kickChannel: "fazebanks",
+  twitchChannel2: "blknoiz06",
+  // the show doesn't stream on Kick today — the lane stays ready for the
+  // day they add one (exactly what the brief asks for)
+  kickChannel: "",
   // a bare @handle engages the KEYLESS live-broadcast chat lane — the show
   // streams on X, so its broadcast chat joins the feed with zero credentials
   xQuery: "@MarketBubble",
@@ -19,6 +24,7 @@ export const MARKET_BUBBLE_DEFAULTS: AppConfig = {
 export const BLANK_DEFAULTS: AppConfig = {
   ...MARKET_BUBBLE_DEFAULTS,
   twitchChannel: "",
+  twitchChannel2: "",
   kickChannel: "",
   xQuery: "",
   brandPreset: "custom",
@@ -52,6 +58,7 @@ export function loadConfig(): AppConfig {
     const d = MARKET_BUBBLE_DEFAULTS;
     return {
       twitchChannel: str(p.twitchChannel, d.twitchChannel),
+      twitchChannel2: str(p.twitchChannel2, d.twitchChannel2),
       kickChannel: str(p.kickChannel, d.kickChannel),
       xQuery: str(p.xQuery, d.xQuery),
       enabled: {

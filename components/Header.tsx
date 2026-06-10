@@ -141,9 +141,14 @@ export function Header({
           {brandName.trim() || "Mainchat"}
         </h1>
         {brandPreset === "marketbubble" && (
-          <p className="flourish -mt-px hidden text-[12px] text-muted sm:block short:hidden">
-            <span className="text-[#d11226]/90">&ldquo;</span>invest in yourself
-            <span className="text-[#d11226]/90">&rdquo;</span>
+          <p className="-mt-px hidden items-baseline gap-1.5 text-[12px] text-muted sm:flex short:hidden">
+            <span className="flourish">
+              <span className="text-[#d11226]/90">&ldquo;</span>invest in yourself
+              <span className="text-[#d11226]/90">&rdquo;</span>
+            </span>
+            <span className="hidden font-mono text-[8px] tracking-[0.18em] text-faint md:inline">
+              · PRESENTED BY POLYMARKET
+            </span>
           </p>
         )}
       </div>

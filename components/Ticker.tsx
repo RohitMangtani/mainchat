@@ -84,8 +84,10 @@ export function Ticker() {
       })}
       {markets.map((m, i) => (
         <span key={`${key}-m${i}`} className="flex items-center">
-          <span className="font-mono text-[9px] tracking-[0.2em] text-gold/70">
-            ODDS
+          {/* odds carry their source, the way the show's own strip does */}
+          <span className="text-[8px] text-[#4a7dff]">◆</span>
+          <span className="ml-1 font-mono text-[9px] tracking-[0.18em] text-cream/60">
+            POLYMARKET
           </span>
           <span className="ml-1.5 font-mono text-[10px] tracking-wider text-cream/70">
             {shortQuestion(m.question)}
@@ -96,6 +98,13 @@ export function Ticker() {
           <span className="mx-4 text-[8px] text-white/15">◆</span>
         </span>
       ))}
+      {/* broadcast-style source attribution, once per loop */}
+      <span className="flex items-center">
+        <span className="font-mono text-[8.5px] tracking-[0.22em] text-faint">
+          ODDS BY POLYMARKET · PRICES: YAHOO FINANCE + COINGECKO
+        </span>
+        <span className="mx-4 text-[8px] text-white/15">◆</span>
+      </span>
     </div>
   );
 

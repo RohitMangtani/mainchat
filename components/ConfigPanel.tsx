@@ -146,7 +146,7 @@ export function ConfigPanel({
                 Load Market Bubble Defaults
               </span>
               <span className="mt-0.5 block text-[11px] text-muted">
-                Banks + Ansem, Thursdays 1PM PT — channels pre-wired
+                Banks + Ansem · presented by Polymarket · Thursdays 1PM PT
               </span>
             </span>
           </button>

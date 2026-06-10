@@ -56,6 +56,10 @@ app/api/          tape · twitch/info · kick/channel · x/stream · x/live
 app/overlay/      transparent OBS browser-source route
 ```
 
+## Data + show credits
+
+Odds on the tape come from **Polymarket** (the show's presenting sponsor) via their public gamma API; prices from **Yahoo Finance** and **CoinGecko**. Market Bubble is hosted by **Banks** + **Ansem**, Thursdays 1PM PT. Sources are attributed on the tape itself, broadcast-style.
+
 ## Deploy
 
 ```bash

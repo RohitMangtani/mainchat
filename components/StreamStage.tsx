@@ -7,6 +7,8 @@ import { Hover } from "./Tooltip";
 
 export type StageMode = "split" | "a" | "b" | "pip";
 
+const MODE_KEY = "mainchat.stageMode.v1";
+
 function viewerLabel(n: number | null | undefined) {
   if (n == null) return "—";
   if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
@@ -83,15 +85,33 @@ export function StreamStage({
   statuses: Record<PlatformId, PlatformStatus>;
   twitch2Info: Pick<PlatformStatus, "live" | "viewers" | "streamTitle">;
 }) {
-  const [mode, setMode] = useState<StageMode>("split");
+  const [mode, setModeState] = useState<StageMode>("split");
   const [pipMain, setPipMain] = useState<"a" | "b">("a");
   const [host, setHost] = useState<string | null>(null);
 
   // Twitch's embed requires the embedding hostname as a `parent` param —
   // resolve it at runtime so the same build works on any domain.
+  // Also resolve the initial stage mode: side-by-side cells letterbox badly
+  // in a tall desktop column, so big screens open in PiP (main stream
+  // near-full-bleed); the user's own choice persists and always wins.
   useEffect(() => {
     setHost(window.location.hostname);
+    const saved = window.localStorage.getItem(MODE_KEY);
+    if (saved === "split" || saved === "a" || saved === "b" || saved === "pip") {
+      setModeState(saved);
+    } else if (window.innerWidth >= 1024) {
+      setModeState("pip");
+    }
   }, []);
+
+  const setMode = (m: StageMode) => {
+    setModeState(m);
+    try {
+      window.localStorage.setItem(MODE_KEY, m);
+    } catch {
+      // private mode — the choice just won't persist
+    }
+  };
 
   const twitchSrc = (channel: string) =>
     host && channel
@@ -155,7 +175,10 @@ export function StreamStage({
         p === "a"
           ? "max-sm:portrait:absolute max-sm:portrait:inset-0 max-sm:portrait:aspect-auto"
           : "max-sm:portrait:absolute max-sm:portrait:bottom-2 max-sm:portrait:right-2 max-sm:portrait:z-10 max-sm:portrait:w-[38%] max-sm:portrait:overflow-hidden max-sm:portrait:rounded-lg max-sm:portrait:border max-sm:portrait:border-gold/30";
-      return `relative aspect-video w-full md:aspect-auto md:h-full md:min-h-0 ${phoneSplit}`;
+      // cells stay true 16:9 (centered in the stage) instead of stretching
+      // full-height — stretched cells made the video a small letterboxed
+      // box swimming in black on desktop
+      return `relative aspect-video w-full md:max-h-full md:min-h-0 ${phoneSplit}`;
     }
     if (mode === "a" || mode === "b") {
       return mode === p
@@ -173,7 +196,7 @@ export function StreamStage({
   // cap at 32vh. Desktop lets the stage flex to fill the column.
   const stageClass =
     mode === "split"
-      ? "relative grid w-full grid-cols-2 gap-px bg-black max-sm:portrait:block max-sm:portrait:aspect-video max-sm:portrait:max-h-[32vh] md:min-h-0 md:flex-1 md:auto-rows-fr"
+      ? "relative grid w-full grid-cols-2 content-center gap-px bg-black max-sm:portrait:block max-sm:portrait:aspect-video max-sm:portrait:max-h-[32vh] md:min-h-0 md:flex-1"
       : "relative aspect-video max-h-[32vh] w-full bg-black md:aspect-auto md:min-h-0 md:max-h-none md:flex-1";
 
   return (

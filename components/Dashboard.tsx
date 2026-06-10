@@ -195,7 +195,7 @@ export function Dashboard() {
   };
 
   return (
-    <div className="relative flex h-dvh flex-col">
+    <div className="fill-screen relative flex flex-col">
       {/* gold atmosphere behind the header */}
       <div
         className="pointer-events-none absolute inset-x-0 top-0 h-64"

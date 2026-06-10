@@ -218,4 +218,12 @@
     transition: filter 0.18s ease;
     user-select: none;
   }
+
+  /* full-viewport app shell with a fallback for engines without dvh —
+     if dvh is unsupported the shell would collapse and the app renders
+     as a sliver in the corner */
+  .fill-screen {
+    height: 100vh;
+    height: 100dvh;
+  }
 }

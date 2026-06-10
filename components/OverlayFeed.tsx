@@ -55,7 +55,7 @@ export function OverlayFeed() {
 
   return (
     <div
-      className="flex h-dvh flex-col justify-end overflow-hidden px-2 pb-2 [mask-image:linear-gradient(to_bottom,transparent,black_18%)]"
+      className="fill-screen flex flex-col justify-end overflow-hidden px-2 pb-2 [mask-image:linear-gradient(to_bottom,transparent,black_18%)]"
       style={glance ? { zoom: 1.7 } : undefined}
     >
       {rows.map((m) => (

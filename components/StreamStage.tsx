@@ -75,11 +75,13 @@ export function StreamStage({
   twitchChannel2,
   kickChannel,
   statuses,
+  twitch2Info,
 }: {
   twitchChannel: string;
   twitchChannel2: string;
   kickChannel: string;
   statuses: Record<PlatformId, PlatformStatus>;
+  twitch2Info: Pick<PlatformStatus, "live" | "viewers" | "streamTitle">;
 }) {
   const [mode, setMode] = useState<StageMode>("split");
   const [pipMain, setPipMain] = useState<"a" | "b">("a");
@@ -128,44 +130,9 @@ export function StreamStage({
   }, [kickChannel, twitchChannel2]);
   const slotBSrc = slotB.kind === "twitch2" ? twitchSrc(twitchChannel2) : slotB.src;
 
-  // live status for a twitch2 slot — polled here (the chat connector for the
-  // second channel deliberately doesn't own a status pill)
-  const [slotBTwitchStatus, setSlotBTwitchStatus] = useState<
-    Pick<PlatformStatus, "live" | "viewers" | "streamTitle">
-  >({});
-  useEffect(() => {
-    if (slotB.kind !== "twitch2") return undefined;
-    let cancelled = false;
-    const poll = async () => {
-      try {
-        const res = await fetch(
-          `/api/twitch/info?channel=${encodeURIComponent(twitchChannel2)}`,
-          { cache: "no-store" },
-        );
-        const d: unknown = await res.json();
-        if (cancelled || typeof d !== "object" || d === null) return;
-        const info = d as { ok?: boolean; live?: boolean; viewers?: number | null; title?: string | null };
-        if (info.ok) {
-          setSlotBTwitchStatus({
-            live: info.live === true,
-            viewers: info.viewers ?? null,
-            streamTitle: info.title ?? undefined,
-          });
-        }
-      } catch {
-        // keep last known
-      }
-    };
-    void poll();
-    const id = window.setInterval(() => void poll(), 60_000);
-    return () => {
-      cancelled = true;
-      window.clearInterval(id);
-    };
-  }, [slotB.kind, twitchChannel2]);
-
-  const slotBStatus =
-    slotB.kind === "kick" ? statuses.kick : slotBTwitchStatus;
+  // twitch2 live/viewer info is polled once in Dashboard and shared with the
+  // header's combined count
+  const slotBStatus = slotB.kind === "kick" ? statuses.kick : twitch2Info;
 
   const MODES: { id: StageMode; label: string }[] = [
     { id: "split", label: "SPLIT" },

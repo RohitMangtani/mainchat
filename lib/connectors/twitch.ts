@@ -371,6 +371,7 @@ export class TwitchConnector implements Connector {
     const msg: ChatMessage = {
       id,
       platform: "twitch",
+      channel: this.channel.toLowerCase(),
       username,
       displayName: tags["display-name"] || username,
       text,

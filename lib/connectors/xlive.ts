@@ -317,6 +317,7 @@ export class XLiveConnector implements Connector {
     const msg: ChatMessage = {
       id: uuid ? `xlive-${uuid}` : `xlive-${Date.now()}-${this.msgCounter}`,
       platform: "x",
+      channel: this.user.toLowerCase(),
       username,
       displayName,
       text,

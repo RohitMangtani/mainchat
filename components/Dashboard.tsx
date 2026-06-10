@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { AppConfig } from "@/lib/types";
+import type { AppConfig, PlatformStatus } from "@/lib/types";
 import { MARKET_BUBBLE_DEFAULTS, loadConfig, saveConfig } from "@/lib/config";
 import { useChat } from "@/lib/useChat";
 import { ChatFeed } from "./ChatFeed";
@@ -14,6 +14,115 @@ import { VibePanel } from "./VibePanel";
 const CHAT_WIDTH_KEY = "mainchat.chatWidth.v1";
 const MIN_CHAT = 300;
 const MAX_CHAT = 600;
+
+type StreamInfo = Pick<PlatformStatus, "live" | "viewers" | "streamTitle">;
+
+/** Next Thursday 1:00 PM Pacific (the show's slot). Pacific is UTC-7 in
+ *  the summer months this targets. */
+function nextShowTime(): Date {
+  const now = new Date();
+  for (let d = 0; d < 8; d += 1) {
+    const candidate = new Date(now.getTime() + d * 86_400_000);
+    const la = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Los_Angeles",
+      weekday: "short",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(candidate);
+    const get = (t: string) => la.find((p) => p.type === t)?.value ?? "";
+    if (get("weekday") === "Thu") {
+      const target = new Date(
+        `${get("year")}-${get("month")}-${get("day")}T13:00:00-07:00`,
+      );
+      if (target.getTime() > now.getTime()) return target;
+    }
+  }
+  return new Date(now.getTime() + 7 * 86_400_000);
+}
+
+/** Off-air state a judge actually sees: when no stream is live, say when the
+ *  next show is and offer the simulated crowd in one tap. */
+function OffAirBanner({
+  onDemo,
+  demoOn,
+}: {
+  onDemo: (on: boolean) => void;
+  demoOn: boolean;
+}) {
+  const [now, setNow] = useState(() => Date.now());
+  const [target] = useState(() => nextShowTime());
+
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 30_000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const ms = Math.max(0, target.getTime() - now);
+  const h = Math.floor(ms / 3_600_000);
+  const m = Math.floor((ms % 3_600_000) / 60_000);
+
+  return (
+    <div className="flex items-center gap-2.5 border-b hairline bg-ink-1/40 px-3 py-1.5 md:px-5">
+      <span className="h-1.5 w-1.5 rounded-full bg-faint" />
+      <p className="min-w-0 truncate font-mono text-[10px] tracking-wider text-muted">
+        OFF AIR · NEXT SHOW THU 1:00 PM PT
+        <span className="text-cream/80"> · in {h}h {m}m</span>
+      </p>
+      <button
+        onClick={() => onDemo(!demoOn)}
+        className={`ml-auto shrink-0 rounded-md border px-2.5 py-1 font-mono text-[9px] tracking-widest transition-colors ${
+          demoOn
+            ? "border-gold/40 bg-gold/15 text-gold"
+            : "border-white/10 text-muted hover:border-gold/40 hover:text-gold"
+        }`}
+      >
+        {demoOn ? "DEMO CROWD ON — STOP" : "SIMULATE THE CROWD"}
+      </button>
+    </div>
+  );
+}
+
+/** Live/viewer info for the optional second Twitch stream — its chat
+ *  connector deliberately doesn't own a status pill, so the dashboard
+ *  polls the info route directly (shared by the header sum + stage tag). */
+function useTwitch2Info(channel: string): StreamInfo {
+  const [info, setInfo] = useState<StreamInfo>({});
+  useEffect(() => {
+    const ch = channel.trim();
+    if (ch === "") {
+      setInfo({});
+      return undefined;
+    }
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const res = await fetch(`/api/twitch/info?channel=${encodeURIComponent(ch)}`, {
+          cache: "no-store",
+        });
+        const d: unknown = await res.json();
+        if (cancelled || typeof d !== "object" || d === null) return;
+        const r = d as { ok?: boolean; live?: boolean; viewers?: number | null; title?: string | null };
+        if (r.ok) {
+          setInfo({
+            live: r.live === true,
+            viewers: r.viewers ?? null,
+            streamTitle: r.title ?? undefined,
+          });
+        }
+      } catch {
+        // keep last known
+      }
+    };
+    void poll();
+    const id = window.setInterval(() => void poll(), 60_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [channel]);
+  return info;
+}
 
 export function Dashboard() {
   // start from defaults on both server and client, then hydrate the saved
@@ -38,6 +147,9 @@ export function Dashboard() {
   }, []);
 
   const chat = useChat(hydrated ? config : { ...config, enabled: { twitch: false, kick: false, x: false }, demoMode: false });
+  const twitch2Info = useTwitch2Info(
+    hydrated && config.enabled.twitch ? config.twitchChannel2 : "",
+  );
 
   // drag-to-resize the chat column — no transition while dragging (1:1
   // tracking); player iframes get pointer-events:none so they can't eat
@@ -99,6 +211,7 @@ export function Dashboard() {
           brandName={config.brandName}
           brandPreset={config.brandPreset}
           statuses={chat.statuses}
+          twitch2Info={twitch2Info}
           onOpenConfig={() => setConfigOpen(true)}
         />
       </div>
@@ -106,6 +219,16 @@ export function Dashboard() {
       <div className="animate-rise [animation-delay:70ms]">
         <Ticker />
       </div>
+
+      {hydrated &&
+        !chat.statuses.twitch.live &&
+        !chat.statuses.kick.live &&
+        !twitch2Info.live && (
+          <OffAirBanner
+            demoOn={config.demoMode}
+            onDemo={(on) => applyConfig({ ...config, demoMode: on })}
+          />
+        )}
 
       {/* main floor — no page scroll at any size: the stage stays pinned and
           the chat scrolls inside its own pane (the Twitch-mobile pattern) */}
@@ -121,6 +244,7 @@ export function Dashboard() {
             twitchChannel2={config.enabled.twitch ? config.twitchChannel2 : ""}
             kickChannel={config.enabled.kick ? config.kickChannel : ""}
             statuses={chat.statuses}
+            twitch2Info={twitch2Info}
           />
           {/* the vibe strip yields its height to the players on short screens */}
           <div className="short:hidden">

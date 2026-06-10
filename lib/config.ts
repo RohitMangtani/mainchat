@@ -8,9 +8,8 @@ export const MARKET_BUBBLE_DEFAULTS: AppConfig = {
   // Market Bubble episodes); Ansem's channel fills the second stage slot
   twitchChannel: "fazebanks",
   twitchChannel2: "blknoiz06",
-  // the show doesn't stream on Kick today — the lane stays ready for the
-  // day they add one (exactly what the brief asks for)
-  kickChannel: "",
+  // Ansem's verified Kick channel — lights up the Kick lane out of the box
+  kickChannel: "ansem",
   // a bare @handle engages the KEYLESS live-broadcast chat lane — the show
   // streams on X, so its broadcast chat joins the feed with zero credentials
   xQuery: "@MarketBubble",
@@ -39,6 +38,17 @@ function bool(value: unknown, fallback: boolean): boolean {
   return typeof value === "boolean" ? value : fallback;
 }
 
+/** Channel/handle → on-air host label. Banks' judging note asked for
+ *  "specific labeling on who it's coming from" — both hosts stream on
+ *  multiple platforms, so the platform badge alone is ambiguous. */
+export const HOST_LABELS: Record<string, string> = {
+  fazebanks: "BANKS",
+  banks: "BANKS",
+  blknoiz06: "ANSEM",
+  ansem: "ANSEM",
+  marketbubble: "SHOW",
+};
+
 export function loadConfig(): AppConfig {
   if (typeof window === "undefined") return MARKET_BUBBLE_DEFAULTS;
   try {
@@ -56,10 +66,15 @@ export function loadConfig(): AppConfig {
         ? (p.enabled as Record<string, unknown>)
         : {};
     const d = MARKET_BUBBLE_DEFAULTS;
+    // migration: configs saved before Ansem's Kick channel was wired get it
+    // back when they're still on the show preset
+    const kickStored = str(p.kickChannel, d.kickChannel);
+    const kickChannel =
+      kickStored === "" && p.brandPreset !== "custom" ? d.kickChannel : kickStored;
     return {
       twitchChannel: str(p.twitchChannel, d.twitchChannel),
       twitchChannel2: str(p.twitchChannel2, d.twitchChannel2),
-      kickChannel: str(p.kickChannel, d.kickChannel),
+      kickChannel,
       xQuery: str(p.xQuery, d.xQuery),
       enabled: {
         twitch: bool(en.twitch, d.enabled.twitch),

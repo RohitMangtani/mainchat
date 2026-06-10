@@ -111,13 +111,27 @@ export function Header({
   brandName,
   brandPreset,
   statuses,
+  twitch2Info,
   onOpenConfig,
 }: {
   brandName: string;
   brandPreset: "marketbubble" | "custom";
   statuses: Record<PlatformId, PlatformStatus>;
+  twitch2Info: Pick<PlatformStatus, "live" | "viewers" | "streamTitle">;
   onOpenConfig: () => void;
 }) {
+  // the COMBINED audience across every connected platform — with a hover
+  // breakdown showing exactly where it's coming from
+  const parts: { label: string; viewers: number }[] = [];
+  if (typeof statuses.twitch.viewers === "number")
+    parts.push({ label: "Twitch", viewers: statuses.twitch.viewers });
+  if (typeof twitch2Info.viewers === "number")
+    parts.push({ label: "Twitch (co-host)", viewers: twitch2Info.viewers });
+  if (typeof statuses.kick.viewers === "number")
+    parts.push({ label: "Kick", viewers: statuses.kick.viewers });
+  if (typeof statuses.x.viewers === "number")
+    parts.push({ label: "X", viewers: statuses.x.viewers });
+  const combined = parts.reduce((sum, p) => sum + p.viewers, 0);
   return (
     <header className="flex items-center gap-2.5 px-3 py-2.5 max-[360px]:gap-1.5 max-[360px]:px-2 short:py-1.5 md:gap-3 md:px-5 md:py-3">
       <BubbleMark className="h-7 w-7 shrink-0 text-cream max-[360px]:h-6 max-[360px]:w-6 md:h-8 md:w-8" />
@@ -136,6 +150,30 @@ export function Header({
 
       <div className="ml-auto flex items-center gap-1.5 md:gap-3">
         <WorldClocks />
+
+        {combined > 0 && (
+          <Hover
+            tip={
+              <span>
+                <b className="text-gold-soft">{combined.toLocaleString()}</b> watching
+                across every platform
+                {parts.map((p) => (
+                  <span key={p.label} className="mt-1 block text-muted">
+                    {p.label}: {p.viewers.toLocaleString()}
+                  </span>
+                ))}
+              </span>
+            }
+          >
+            <span className="flex cursor-default items-center gap-1.5 rounded-lg border border-gold/30 bg-gold/8 px-2 py-1.5 sm:px-2.5">
+              <span className="display-label text-[8px] text-gold/80">Live</span>
+              <span className="tabular text-[13px] font-bold leading-none text-gold-soft">
+                {combined >= 1000 ? `${(combined / 1000).toFixed(1)}k` : combined}
+              </span>
+            </span>
+          </Hover>
+        )}
+
         <div className="flex items-center gap-1.5 md:gap-2">
           <StatusPill platform="twitch" status={statuses.twitch} />
           <StatusPill platform="kick" status={statuses.kick} />

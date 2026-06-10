@@ -32,9 +32,24 @@ const instrument = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://mainchat-theta.vercel.app"),
   title: "Mainchat — every chat, one feed",
   description:
     "Unified real-time chat and live stream dashboard. Twitch, Kick, and X in one feed, your streams on one screen. Built for Market Bubble, ready for any creator.",
+  openGraph: {
+    title: "Mainchat — every chat, one feed",
+    description:
+      "Twitch + Kick + X chat merged in real time, streams on the same screen, live MARKET WATCH tape. Zero keys, zero setup.",
+    images: [{ url: "/og.png", width: 1512, height: 900 }],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Mainchat — every chat, one feed",
+    description:
+      "Twitch + Kick + X chat merged in real time, streams on the same screen, live MARKET WATCH tape. Zero keys, zero setup.",
+    images: ["/og.png"],
+  },
 };
 
 export default function RootLayout({

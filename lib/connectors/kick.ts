@@ -280,6 +280,7 @@ export class KickConnector implements Connector {
     const msg: ChatMessage = {
       id: `kick-${nativeId}`,
       platform: "kick",
+      channel: this.channel.toLowerCase(),
       username,
       displayName: senderName || username,
       text: cleanText,

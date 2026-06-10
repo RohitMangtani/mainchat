@@ -3,6 +3,7 @@
 import { memo, useMemo, useState } from "react";
 import type { Badge, ChatMessage } from "@/lib/types";
 import { emoteResolver } from "@/lib/emoteResolver";
+import { HOST_LABELS } from "@/lib/config";
 import { PLATFORM_META, PlatformBadge } from "./PlatformBadge";
 import { Hover } from "./Tooltip";
 
@@ -47,9 +48,22 @@ function MessageRowInner({
     [msg.platform, msg.text, msg.nativeEmotes],
   );
 
+  // whose chat this arrived through — both hosts stream on several platforms,
+  // so the platform badge alone doesn't answer "who is this coming from"
+  const hostLabel = msg.channel
+    ? (HOST_LABELS[msg.channel] ?? msg.channel.slice(0, 8).toUpperCase())
+    : null;
+
   const sourceTip = (
     <span>
       Coming from <b style={{ color: meta.color }}>{meta.name}</b>
+      {msg.channel && (
+        <>
+          {" · "}
+          <b className="text-gold-soft">{msg.channel}</b>
+          {hostLabel && HOST_LABELS[msg.channel] ? ` (${HOST_LABELS[msg.channel]}'s chat)` : ""}
+        </>
+      )}
       {msg.isDemo && " · demo feed"}
       <span className="mt-1 block text-muted">
         {msg.displayName} · {formatClock(msg.timestamp)}
@@ -68,6 +82,11 @@ function MessageRowInner({
       <Hover tip={sourceTip} block>
         <span className="mr-1.5 inline-flex translate-y-px items-center gap-1">
           <PlatformBadge platform={msg.platform} />
+          {hostLabel && HOST_LABELS[msg.channel ?? ""] && (
+            <span className="inline-flex items-center rounded border border-gold/30 bg-gold/8 px-1 py-px font-mono text-[8.5px] tracking-wider text-gold-soft">
+              {hostLabel}
+            </span>
+          )}
           {msg.badges.map((b) => (
             <span
               key={b}

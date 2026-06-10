@@ -112,17 +112,19 @@ export function Header({
   brandPreset,
   statuses,
   twitch2Info,
+  demoMode,
   onOpenConfig,
 }: {
   brandName: string;
   brandPreset: "marketbubble" | "custom";
   statuses: Record<PlatformId, PlatformStatus>;
   twitch2Info: Pick<PlatformStatus, "live" | "viewers" | "streamTitle">;
+  demoMode: boolean;
   onOpenConfig: () => void;
 }) {
   // the COMBINED audience across every connected platform — with a hover
   // breakdown showing exactly where it's coming from
-  const parts: { label: string; viewers: number }[] = [];
+  let parts: { label: string; viewers: number }[] = [];
   if (typeof statuses.twitch.viewers === "number")
     parts.push({ label: "Twitch", viewers: statuses.twitch.viewers });
   if (typeof twitch2Info.viewers === "number")
@@ -131,7 +133,20 @@ export function Header({
     parts.push({ label: "Kick", viewers: statuses.kick.viewers });
   if (typeof statuses.x.viewers === "number")
     parts.push({ label: "X", viewers: statuses.x.viewers });
-  const combined = parts.reduce((sum, p) => sum + p.viewers, 0);
+  let combined = parts.reduce((sum, p) => sum + p.viewers, 0);
+
+  // demo mode shows the combined display with a simulated audience
+  // (clearly labeled) so the feature is visible while the show is dark
+  const demoCount = combined === 0 && demoMode;
+  if (demoCount) {
+    const wobble = Math.floor(Date.now() / 60_000) % 7;
+    parts = [
+      { label: "Twitch (demo)", viewers: 8200 + wobble * 130 },
+      { label: "Kick (demo)", viewers: 3100 + wobble * 60 },
+      { label: "X (demo)", viewers: 5400 + wobble * 90 },
+    ];
+    combined = parts.reduce((sum, p) => sum + p.viewers, 0);
+  }
   return (
     <header className="flex items-center gap-2.5 px-3 py-2.5 max-[360px]:gap-1.5 max-[360px]:px-2 short:py-1.5 md:gap-3 md:px-5 md:py-3">
       <BubbleMark className="h-7 w-7 shrink-0 text-cream max-[360px]:h-6 max-[360px]:w-6 md:h-8 md:w-8" />
@@ -160,8 +175,8 @@ export function Header({
           <Hover
             tip={
               <span>
-                <b className="text-gold-soft">{combined.toLocaleString()}</b> watching
-                across every platform
+                <b className="text-gold-soft">{combined.toLocaleString()}</b>{" "}
+                {demoCount ? "simulated viewers (demo mode)" : "watching across every platform"}
                 {parts.map((p) => (
                   <span key={p.label} className="mt-1 block text-muted">
                     {p.label}: {p.viewers.toLocaleString()}

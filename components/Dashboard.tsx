@@ -212,6 +212,7 @@ export function Dashboard() {
           brandPreset={config.brandPreset}
           statuses={chat.statuses}
           twitch2Info={twitch2Info}
+          demoMode={hydrated && config.demoMode}
           onOpenConfig={() => setConfigOpen(true)}
         />
       </div>
@@ -223,6 +224,7 @@ export function Dashboard() {
       {hydrated &&
         !chat.statuses.twitch.live &&
         !chat.statuses.kick.live &&
+        !chat.statuses.x.live &&
         !twitch2Info.live && (
           <OffAirBanner
             demoOn={config.demoMode}

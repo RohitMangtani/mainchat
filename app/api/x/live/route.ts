@@ -45,6 +45,8 @@ interface LiveResponse {
   accessToken: string | null;
   roomId: string | null;
   broadcastTitle: string | null;
+  /** concurrent watcher count from the broadcast status, when exposed */
+  viewers: number | null;
   detail: string;
 }
 
@@ -55,6 +57,7 @@ function offline(detail: string): NextResponse {
     accessToken: null,
     roomId: null,
     broadcastTitle: null,
+    viewers: null,
     detail,
   };
   return NextResponse.json(body);
@@ -205,13 +208,26 @@ async function findLiveBroadcast(
 
 // ── step 4: chat token → chat access ─────────────────────────────────────────
 
-async function getChatToken(broadcastId: string, guestToken: string): Promise<string | null> {
+async function getChatToken(
+  broadcastId: string,
+  guestToken: string,
+): Promise<{ token: string; viewers: number | null } | null> {
   const res = await fetchJson(
     `https://api.twitter.com/1.1/live_video_stream/status/${encodeURIComponent(broadcastId)}.json`,
     { headers: { Authorization: PUBLIC_BEARER, "x-guest-token": guestToken } },
   );
   if (!res || res.status !== 200 || !isRecord(res.body)) return null;
-  return asString(res.body.chatToken) ?? asString(res.body.chat_token);
+  const token = asString(res.body.chatToken) ?? asString(res.body.chat_token);
+  if (!token) return null;
+  // concurrent watchers, when the status payload exposes them
+  const occupancy = res.body.occupancy ?? res.body.total_watching;
+  const viewers =
+    typeof occupancy === "number"
+      ? occupancy
+      : typeof occupancy === "string" && /^\d+$/.test(occupancy)
+        ? parseInt(occupancy, 10)
+        : null;
+  return { token, viewers };
 }
 
 interface ChatAccess {
@@ -275,16 +291,16 @@ export async function GET(request: Request): Promise<Response> {
       return offline(`no live broadcast found for @${user}`);
     }
 
-    // 4a. Broadcast id → chat token.
-    const chatToken = await getChatToken(broadcast.id, guestToken);
-    if (!chatToken) {
+    // 4a. Broadcast id → chat token (+ watcher occupancy when exposed).
+    const chat = await getChatToken(broadcast.id, guestToken);
+    if (!chat) {
       return offline(
         `live_video_stream status returned no chatToken (broadcast ${broadcast.id})`,
       );
     }
 
     // 4b. Chat token → Periscope public chat endpoint + room credentials.
-    const access = await getChatAccess(chatToken);
+    const access = await getChatAccess(chat.token);
     if (!access) {
       return offline("accessChatPublic failed (proxsee.pscp.tv returned no endpoint/token/room)");
     }
@@ -295,6 +311,7 @@ export async function GET(request: Request): Promise<Response> {
       accessToken: access.accessToken,
       roomId: access.roomId,
       broadcastTitle: broadcast.title,
+      viewers: chat.viewers,
       detail: `live broadcast ${broadcast.id} for @${user}`,
     };
     return NextResponse.json(body);

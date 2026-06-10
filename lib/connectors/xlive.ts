@@ -21,6 +21,7 @@ interface LiveLookup {
   accessToken: string | null;
   roomId: string | null;
   broadcastTitle: string | null;
+  viewers: number | null;
   detail: string;
 }
 
@@ -55,6 +56,7 @@ function parseLookup(body: unknown): LiveLookup | null {
     accessToken: asString(body.accessToken),
     roomId: asString(body.roomId),
     broadcastTitle: asString(body.broadcastTitle),
+    viewers: typeof body.viewers === "number" ? body.viewers : null,
     detail: asString(body.detail) ?? "",
   };
 }
@@ -76,6 +78,7 @@ export class XLiveConnector implements Connector {
   private msgCounter = 0;
   private lastStatusKey = "";
   private broadcastTitle: string | null = null;
+  private viewers: number | null = null;
 
   constructor(user: string, events: ConnectorEvents) {
     this.user = user.trim().replace(/^@/, "");
@@ -204,6 +207,7 @@ export class XLiveConnector implements Connector {
     }
 
     this.broadcastTitle = nonEmpty(lookup.broadcastTitle);
+    this.viewers = lookup.viewers;
     this.connectSocket(gen, lookup.wsUrl, lookup.accessToken, lookup.roomId);
   }
 
@@ -244,6 +248,7 @@ export class XLiveConnector implements Connector {
         live: true,
       };
       if (this.broadcastTitle) status.streamTitle = this.broadcastTitle;
+      if (this.viewers !== null) status.viewers = this.viewers;
       this.emitStatus(status);
     };
 

@@ -238,8 +238,20 @@ export function useChat(config: AppConfig): UseChatResult {
     if (platforms.length === 0) {
       platforms = [...ALL_PLATFORMS];
     }
+    // demo messages carry the configured channels so host labels render
+    // exactly as they will on show day (still honestly tagged DEMO)
+    const channelFor = (p: PlatformId): string | undefined => {
+      if (p === "twitch") {
+        const second = config.twitchChannel2.trim();
+        if (second && Math.random() < 0.4) return second.toLowerCase();
+        return config.twitchChannel.trim().toLowerCase() || undefined;
+      }
+      if (p === "kick") return config.kickChannel.trim().toLowerCase() || undefined;
+      const handle = config.xQuery.trim().replace(/^@/, "");
+      return /^\w{1,15}$/.test(handle) ? handle.toLowerCase() : undefined;
+    };
     const events: ConnectorEvents = {
-      onMessage: ingest,
+      onMessage: (msg) => ingest({ ...msg, channel: channelFor(msg.platform) }),
       onStatus: (status) => {
         for (const p of platforms) {
           mergeStatus(p, status);
@@ -251,7 +263,16 @@ export function useChat(config: AppConfig): UseChatResult {
     return () => {
       connector.stop();
     };
-  }, [config.demoMode, enabledKey, ingest, mergeStatus]);
+  }, [
+    config.demoMode,
+    config.twitchChannel,
+    config.twitchChannel2,
+    config.kickChannel,
+    config.xQuery,
+    enabledKey,
+    ingest,
+    mergeStatus,
+  ]);
 
   // ── Flush tick: drain the buffer into React state in one setState ────────
   // Counts publish here too (with bail-outs), so the render cadence stays

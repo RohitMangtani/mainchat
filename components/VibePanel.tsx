@@ -33,7 +33,7 @@ export function VibePanel({ vibe }: { vibe: VibeSnapshot }) {
   const color = meterColor(vibe.meter);
 
   return (
-    <section className="panel grid grid-cols-[1.4fr_1fr] gap-x-4 gap-y-3 px-3.5 py-2.5 sm:gap-x-8 sm:px-4 sm:py-3">
+    <section className="panel grid grid-cols-[1.4fr_1fr] gap-x-4 gap-y-3 px-3.5 py-2.5 sm:gap-x-8 sm:px-4 sm:py-3 lg:grid-cols-[minmax(0,440px)_minmax(0,300px)] lg:justify-between">
       {/* vibe check */}
       <div>
         <p className="display-label mb-1.5 text-[9px] text-muted">Vibe Check</p>
@@ -59,7 +59,7 @@ export function VibePanel({ vibe }: { vibe: VibeSnapshot }) {
       </div>
 
       {/* top chatters */}
-      <div>
+      <div className="min-w-0">
         <p className="display-label mb-1.5 text-[9px] text-muted">Top Chatters</p>
         {vibe.topChatters.length === 0 ? (
           <p className="text-[11px] text-faint">—</p>
@@ -69,6 +69,7 @@ export function VibePanel({ vibe }: { vibe: VibeSnapshot }) {
               <li key={`${c.platform}:${c.username}`} className="flex items-center gap-1.5">
                 <span className="tabular w-3 text-[10px] text-faint">{i + 1}</span>
                 <Hover
+                  className="min-w-0 flex-1"
                   tip={
                     <span>
                       Coming from{" "}
@@ -81,13 +82,13 @@ export function VibePanel({ vibe }: { vibe: VibeSnapshot }) {
                     </span>
                   }
                 >
-                  <span className="flex cursor-default items-center gap-1 text-[12px] font-bold text-cream/90">
+                  <span className="flex min-w-0 cursor-default items-center gap-1 text-[12px] font-bold text-cream/90">
                     <PlatformIcon
                       platform={c.platform}
-                      className="h-2.5 w-2.5"
+                      className="h-2.5 w-2.5 shrink-0"
                       style={{ color: PLATFORM_META[c.platform].color }}
                     />
-                    {c.displayName}
+                    <span className="truncate">{c.displayName}</span>
                   </span>
                 </Hover>
                 <span className="tabular ml-auto text-[10px] text-faint">{c.count}</span>

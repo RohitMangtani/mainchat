@@ -113,7 +113,7 @@ export function StreamStage({
       return {
         kind: "twitch2" as const,
         src: null as string | null, // resolved below once host is known
-        label: twitchChannel2.slice(0, 9).toUpperCase(),
+        label: twitchChannel2.slice(0, 6).toUpperCase(),
         name: `Twitch · ${twitchChannel2}`,
         color: PLATFORM_META.twitch.color,
       };
@@ -181,7 +181,14 @@ export function StreamStage({
   // iframes, so switching layouts never reloads the streams or drops audio.
   const wrapperClass = (p: "a" | "b"): string => {
     if (mode === "split") {
-      return "relative aspect-video w-full md:aspect-auto md:h-full md:min-h-0";
+      // portrait phones: 2-up cells fall below the Twitch player's usable
+      // minimum, so split renders as a PiP composition instead — slot A
+      // full-bleed, slot B floating
+      const phoneSplit =
+        p === "a"
+          ? "max-sm:portrait:absolute max-sm:portrait:inset-0 max-sm:portrait:aspect-auto"
+          : "max-sm:portrait:absolute max-sm:portrait:bottom-2 max-sm:portrait:right-2 max-sm:portrait:z-10 max-sm:portrait:w-[38%] max-sm:portrait:overflow-hidden max-sm:portrait:rounded-lg max-sm:portrait:border max-sm:portrait:border-gold/30";
+      return `relative aspect-video w-full md:aspect-auto md:h-full md:min-h-0 ${phoneSplit}`;
     }
     if (mode === "a" || mode === "b") {
       return mode === p
@@ -199,7 +206,7 @@ export function StreamStage({
   // cap at 32vh. Desktop lets the stage flex to fill the column.
   const stageClass =
     mode === "split"
-      ? "relative grid w-full grid-cols-2 gap-px bg-black md:min-h-0 md:flex-1 md:auto-rows-fr"
+      ? "relative grid w-full grid-cols-2 gap-px bg-black max-sm:portrait:block max-sm:portrait:aspect-video max-sm:portrait:max-h-[32vh] md:min-h-0 md:flex-1 md:auto-rows-fr"
       : "relative aspect-video max-h-[32vh] w-full bg-black md:aspect-auto md:min-h-0 md:max-h-none md:flex-1";
 
   return (
@@ -207,7 +214,7 @@ export function StreamStage({
       {/* stage toolbar */}
       <div className="flex items-center gap-2 border-b hairline px-3 py-2">
         <h2 className="chyron text-[9px]">Stage</h2>
-        <div className="ml-auto flex items-center gap-1 rounded-lg border border-white/8 bg-ink-0/60 p-0.5">
+        <div className="ml-auto flex min-w-0 items-center gap-1 overflow-x-auto rounded-lg border border-white/8 bg-ink-0/60 p-0.5">
           {MODES.map((m) => (
             <button
               key={m.id}
@@ -218,7 +225,7 @@ export function StreamStage({
                   setMode(m.id);
                 }
               }}
-              className={`rounded-md px-2 py-1 font-mono text-[9px] tracking-widest transition-all sm:px-2.5 ${
+              className={`shrink-0 rounded-md px-1.5 py-1 font-mono text-[9px] tracking-widest transition-all sm:px-2.5 ${
                 mode === m.id
                   ? "bg-gold/15 text-gold shadow-[inset_0_0_0_1px_rgba(245,196,0,0.3)]"
                   : "text-muted hover:text-cream"

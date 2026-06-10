@@ -101,7 +101,9 @@ export function ChatFeed({
       {/* feed header */}
       <header className="flex items-center gap-2 border-b hairline px-3 py-2.5">
         <h2 className="chyron text-[9px]">Mainchat</h2>
-        <span className="tabular text-[10px] text-faint">{visible.length}</span>
+        <span className="tabular hidden text-[10px] text-faint min-[360px]:inline">
+          {visible.length}
+        </span>
 
         <div className="ml-auto flex items-center gap-1">
           {ALL_PLATFORMS.map((p) => {
@@ -123,7 +125,7 @@ export function ChatFeed({
             );
           })}
 
-          <div className="mx-1 h-4 w-px bg-white/10" />
+          <div className="mx-1 hidden h-4 w-px bg-white/10 min-[360px]:block" />
 
           <button
             onClick={() => setQuestionsOnly((q) => !q)}

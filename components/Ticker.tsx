@@ -58,7 +58,8 @@ export function Ticker() {
     };
   }, []);
 
-  // duplicate the strip so the marquee loops seamlessly at -50%
+  // four copies so the -50% loop never shows a gap, even on ultrawides
+  // (the pattern period is one strip, so the loop stays seamless)
   const strip = (key: string) => (
     <div key={key} className="flex shrink-0 items-center">
       {items.map((it) => {
@@ -108,8 +109,7 @@ export function Ticker() {
       ) : (
         <div className="relative min-w-0 flex-1 overflow-hidden py-1.5">
           <div className="flex w-max animate-marquee">
-            {strip("a")}
-            {strip("b")}
+            {["a", "b", "c", "d"].map((k) => strip(k))}
           </div>
           <div className="pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-ink-0 to-transparent" />
           <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-ink-0 to-transparent" />

@@ -34,6 +34,10 @@
   --animate-rise: rise 0.5s cubic-bezier(0.21, 1.02, 0.73, 1) both;
 }
 
+/* landscape phones / very short windows: the column layout collapses the
+   stage, so these screens get the side-by-side floor instead */
+@custom-variant short (@media (max-height: 500px) and (min-width: 560px));
+
 @keyframes msg-in {
   from {
     opacity: 0;

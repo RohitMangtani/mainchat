@@ -46,6 +46,10 @@ export function Dashboard() {
     window.localStorage.setItem(CHAT_WIDTH_KEY, String(w));
 
   const onDragStart = (e: React.PointerEvent) => {
+    // capture the pointer so the stream survives leaving the 10px handle;
+    // touch-action:none on the handle stops the browser claiming the swipe
+    // as a pan (which would pointercancel the drag on tablets)
+    e.currentTarget.setPointerCapture(e.pointerId);
     dragRef.current = { startX: e.clientX, startW: chatWidth };
     setDragging(true);
     const onMove = (ev: PointerEvent) => {
@@ -106,19 +110,22 @@ export function Dashboard() {
       {/* main floor — no page scroll at any size: the stage stays pinned and
           the chat scrolls inside its own pane (the Twitch-mobile pattern) */}
       <main
-        className={`relative flex min-h-0 flex-1 flex-col gap-2.5 overflow-hidden p-2.5 md:gap-3 md:p-3 lg:flex-row lg:items-stretch ${
+        className={`relative flex min-h-0 flex-1 flex-col gap-2.5 overflow-hidden p-2.5 short:flex-row short:items-stretch short:gap-2 short:p-2 md:gap-3 md:p-3 lg:flex-row lg:items-stretch ${
           dragging ? "select-none [&_iframe]:pointer-events-none" : ""
         }`}
       >
         {/* left column: stage + vibe — compact and pinned on mobile */}
-        <div className="flex min-w-0 shrink-0 animate-rise flex-col gap-2.5 [animation-delay:140ms] md:min-h-0 md:flex-1 md:gap-3">
+        <div className="flex min-w-0 shrink-0 animate-rise flex-col gap-2.5 [animation-delay:140ms] short:min-h-0 short:flex-1 md:min-h-0 md:flex-1 md:gap-3">
           <StreamStage
             twitchChannel={config.enabled.twitch ? config.twitchChannel : ""}
             twitchChannel2={config.enabled.twitch ? config.twitchChannel2 : ""}
             kickChannel={config.enabled.kick ? config.kickChannel : ""}
             statuses={chat.statuses}
           />
-          <VibePanel vibe={chat.vibe} />
+          {/* the vibe strip yields its height to the players on short screens */}
+          <div className="short:hidden">
+            <VibePanel vibe={chat.vibe} />
+          </div>
         </div>
 
         {/* drag handle (desktop) — W3C window-splitter semantics */}
@@ -141,7 +148,7 @@ export function Dashboard() {
             if (e.key === "Home") nudgeWidth(MAX_CHAT);
             if (e.key === "End") nudgeWidth(-MAX_CHAT);
           }}
-          className="group hidden w-2.5 shrink-0 cursor-col-resize items-center justify-center outline-none lg:flex"
+          className="group relative hidden w-2.5 shrink-0 cursor-col-resize touch-none items-center justify-center outline-none after:absolute after:inset-y-0 after:-inset-x-2.5 lg:flex"
           title="Drag to resize chat · double-click to reset"
         >
           <div className="h-16 w-[3px] rounded-full bg-white/8 transition-colors group-hover:bg-gold/40 group-focus-visible:bg-gold/60 group-active:bg-gold/80" />
@@ -150,7 +157,7 @@ export function Dashboard() {
         {/* right column: the unified chat fills whatever the stage doesn't
             use; on lg the CSS var carries the drag-resized width */}
         <div
-          className="relative flex min-h-0 flex-1 animate-rise flex-col [animation-delay:210ms] lg:flex-none lg:w-[var(--chat-w)] lg:shrink-0"
+          className="relative flex min-h-0 flex-1 animate-rise flex-col [animation-delay:210ms] short:min-h-0 short:w-[320px] short:flex-none short:shrink-0 lg:flex-none lg:w-[var(--chat-w)] lg:shrink-0"
           style={{ "--chat-w": `${chatWidth}px` } as React.CSSProperties}
         >
           <ChatFeed
